@@ -153,6 +153,7 @@ class EADLDDesktop:
         self._grid_entry(specs, "half_field", "半视场 / °", 1, 1)
         self._grid_entry(specs, "n_fields", "视场数", 2, 0)
         self._grid_entry(specs, "distortion_percent", "畸变上限 / %", 2, 1)
+        self._grid_entry(specs, "zone_count", "最优环带数", 3, 0, True)
 
         tk.Label(
             body,
@@ -204,7 +205,7 @@ class EADLDDesktop:
         solver.pack(fill="x")
         solver.grid_columnconfigure((0, 1), weight=1, uniform="solver")
         self._grid_entry(solver, "steps", "迭代步数", 0, 0)
-        self._grid_entry(solver, "visual_every", "刷新间隔", 0, 1)
+        self._grid_entry(solver, "visual_every", "光路刷新", 0, 1)
         self._grid_entry(solver, "n_r", "径向采样", 1, 0)
         self._grid_entry(solver, "n_theta", "角向采样", 1, 1)
         self._grid_entry(solver, "lm_parameter", "LM 阻尼", 2, 0)
@@ -383,6 +384,7 @@ class EADLDDesktop:
             "n_r",
             "n_theta",
             "lm_parameter",
+            "zone_count",
         ):
             self.variables[name].set(str(self.preset[name]))
         for index, value in enumerate(self.preset["wavelengths"]):

@@ -66,3 +66,15 @@ def test_zonal_pupil_weights_work_without_spectral_weights():
     pupil = torch.tensor([1.0, 3.0], dtype=torch.float64)
 
     assert _combine_ray_weights(None, pupil) is pupil
+
+
+def test_legacy_replay_can_disable_pupil_quadrature():
+    """论文旧轨迹可关闭后来加入的面积求积，其余运行默认保持开启。"""
+    from inspect import signature
+
+    from eadld.imaging_system import ImagingSystemModule
+
+    parameter = signature(ImagingSystemModule).parameters[
+        "optimization_pupil_quadrature"
+    ]
+    assert parameter.default is True

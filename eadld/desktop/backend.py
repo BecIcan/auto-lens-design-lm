@@ -45,10 +45,11 @@ CASE_PRESETS = {
         "n_fields": 3,
         "n_r": 96,
         "n_theta": 64,
-        "steps": 40,
-        "visual_every": 5,
+        "steps": 200,
+        "visual_every": 1,
         "lm_parameter": 1.0,
         "distortion_percent": 1.0,
+        "zone_count": 12,
         "seed": 0,
     },
     "triplet": {
@@ -59,13 +60,14 @@ CASE_PRESETS = {
         "wavelengths": [486.1, 550.0, 656.3],
         "wavelength_weights": [1.0, 1.0, 1.0],
         "primary_wavelength": 1,
-        "n_fields": 3,
+        "n_fields": 5,
         "n_r": 164,
-        "n_theta": 64,
+        "n_theta": 32,
         "steps": 200,
-        "visual_every": 25,
+        "visual_every": 1,
         "lm_parameter": 1.0,
         "distortion_percent": 1.0,
+        "zone_count": 41,
         "seed": 42,
     },
     "four_element": {
@@ -76,32 +78,33 @@ CASE_PRESETS = {
         "wavelengths": [486.1, 587.6, 656.3],
         "wavelength_weights": [1.0, 1.0, 1.0],
         "primary_wavelength": 1,
-        "n_fields": 3,
+        "n_fields": 11,
         "n_r": 96,
-        "n_theta": 64,
-        "steps": 300,
-        "visual_every": 50,
+        "n_theta": 32,
+        "steps": 750,
+        "visual_every": 1,
         "lm_parameter": 1e6,
         "distortion_percent": 2.0,
-        "seed": 42,
+        "zone_count": 19,
+        "seed": 0,
     },
 }
 
 CASE_MODELS = {
     "singlet": {
-        "design": "configs/demo_cases/designs/singlet_initial.yml",
+        "design": "configs/paper_demos/designs/singlet_recorded_seed.yml",
         "final_design": "configs/demo_cases/designs/singlet_final.yml",
         "psf_shape": [129, 129],
         "psf_abs_size": 0.08,
     },
     "triplet": {
-        "design": "configs/annular_triplet/designs/cooke_annular_initial.yml",
-        "final_design": "configs/annular_triplet/designs/cooke_annular_final.yml",
+        "design": "configs/paper_demos/designs/triplet_prerefine.yml",
+        "final_design": "configs/paper_demos/designs/triplet_postrefine_100.yml",
         "psf_shape": [129, 129],
         "psf_abs_size": 0.04,
     },
     "four_element": {
-        "design": "configs/demo_cases/designs/four_element_initial.yml",
+        "design": "configs/paper_demos/designs/four_element_stage4_seed.yml",
         "final_design": "configs/demo_cases/designs/four_element_final.yml",
         "psf_shape": [65, 65],
         "psf_abs_size": 0.02,
@@ -135,22 +138,17 @@ METRICS = {
 
 
 class DesktopVisualizationCallback(VisualizationCallback):
-    """把桌面实时图封装成简单签名，避开嵌套 CLI 配置。"""
+    """每个 LM 步刷新轻量光路图。"""
 
     def __init__(
         self,
-        every_n_steps=5,
+        every_n_steps=1,
         wavelength_0=486.1,
         wavelength_1=550.0,
         wavelength_2=656.3,
         n_fields=3,
     ):
         wavelengths = (wavelength_0, wavelength_1, wavelength_2)
-        field_indices = (
-            list(range(n_fields))
-            if n_fields <= 3
-            else [0, n_fields // 2, n_fields - 1]
-        )
         super().__init__(
             visualizations=[
                 LensLayout(
@@ -159,6 +157,33 @@ class DesktopVisualizationCallback(VisualizationCallback):
                     n_rays=5,
                     label_materials=True,
                 ),
+            ],
+            save_formats=("png",),
+            every_n_steps=every_n_steps,
+            rc_params={
+                "figure.figsize": (8, 3.6),
+                "figure.constrained_layout.use": True,
+                "figure.dpi": 140,
+                "font.size": 8,
+            },
+        )
+
+
+class DesktopAnalysisCallback(VisualizationCallback):
+    """低频刷新高成本点列图和 RayWave MTF，并始终保存最终状态。"""
+
+    def __init__(
+        self,
+        every_n_steps=50,
+        n_fields=3,
+    ):
+        field_indices = (
+            list(range(n_fields))
+            if n_fields <= 3
+            else [0, n_fields // 2, n_fields - 1]
+        )
+        super().__init__(
+            visualizations=[
                 SpotDiagrams(field_indices=field_indices),
                 WaveMTF(field_indices=field_indices),
             ],
@@ -276,6 +301,10 @@ def build_overlay(params: dict, save_dir: Path) -> dict:
                 "init_args": {"weight": 0.001},
             },
             {
+                "class_path": "eadld.optimization.residuals.FocalLengthResiduals",
+                "init_args": {"weight": 1e6},
+            },
+            {
                 "class_path": "eadld.optimization.residuals.RayPathResiduals",
                 "init_args": {
                     "weight": constraint_weight,
@@ -344,6 +373,30 @@ def build_overlay(params: dict, save_dir: Path) -> dict:
                     "threshold": params["distortion_percent"] / 100.0,
                 },
             },
+            {
+                "class_path": "eadld.optimization.residuals.GlassVariableResiduals",
+                "init_args": {"weight": None},
+            },
+            {
+                "class_path": "eadld.optimization.residuals.GlassMeshDistanceResiduals",
+                "init_args": {
+                    "weight": 0.001,
+                    "threshold": 0.0,
+                    "max_simplex_size": 1.25,
+                },
+            },
+            {
+                "class_path": "eadld.optimization.residuals.ImageHeightResiduals",
+                "init_args": {
+                    "weight": 10.0,
+                    "target": params["target_efl"]
+                    * math.tan(math.radians(params["half_field"])),
+                },
+            },
+            {
+                "class_path": "eadld.optimization.residuals.TotalTrackLengthResiduals",
+                "init_args": {"weight": 10.0, "target": 39.3},
+            },
         ]
     model = CASE_MODELS[demo_case]
     optimizer = (
@@ -367,9 +420,67 @@ def build_overlay(params: dict, save_dir: Path) -> dict:
             "beta": 0.95,
         }
     )
+    analysis_every = min(50, params["steps"])
+    callbacks = [
+        {
+            "class_path": "eadld.utils.callbacks.ConfigFileCallback",
+            "init_args": {"every_n_steps": params["visual_every"]},
+        },
+        "eadld.main.CustomProgressBar",
+    ]
+    if demo_case == "four_element":
+        callbacks.extend(
+            [
+                {
+                    "class_path": "eadld.utils.callbacks.IncreaseGlassVariableResidualsWeightCallback",
+                    "init_args": {
+                        "initial_step": 0.0,
+                        "final_step": 0.5,
+                        "n_increments": 25,
+                        "initial_weight": 0.00001525878,
+                        "final_weight": 512,
+                    },
+                },
+                {
+                    "class_path": "eadld.utils.callbacks.ToggleGlassOptimizationCallback",
+                    "init_args": {
+                        "initial_step": 0.0,
+                        "final_step": 0.5,
+                        "n_cycles": 25,
+                    },
+                },
+                {
+                    "class_path": "eadld.utils.callbacks.BindMaterialsCallback",
+                    "init_args": {"step": 0.5},
+                },
+            ]
+        )
+    callbacks.extend(
+        [
+            {
+                "class_path": "eadld.desktop.backend.DesktopAnalysisCallback",
+                "init_args": {
+                    "every_n_steps": analysis_every,
+                    "n_fields": params["n_fields"],
+                },
+            },
+            {
+                "class_path": "eadld.desktop.backend.DesktopVisualizationCallback",
+                "init_args": {
+                    "every_n_steps": params["visual_every"],
+                    "wavelength_0": params["wavelengths"][0],
+                    "wavelength_1": params["wavelengths"][1],
+                    "wavelength_2": params["wavelengths"][2],
+                    "n_fields": params["n_fields"],
+                },
+            },
+        ]
+    )
     return {
         "seed_everything": params["seed"],
         "model": {
+            # 单片与四片历史早于面积求积；兼容重放后仍用独立面积审计验收。
+            "optimization_pupil_quadrature": demo_case == "triplet",
             "ray_initialization": {
                 "init_args": {
                     "aperture": params["target_efl"] / params["f_number"],
@@ -416,23 +527,7 @@ def build_overlay(params: dict, save_dir: Path) -> dict:
                 "class_path": "eadld.main.CustomLogger",
                 "init_args": {"save_dir": save_dir.as_posix()},
             },
-            "callbacks": [
-                {
-                    "class_path": "eadld.utils.callbacks.ConfigFileCallback",
-                    "init_args": {"every_n_steps": params["visual_every"]},
-                },
-                "eadld.main.CustomProgressBar",
-                {
-                    "class_path": "eadld.desktop.backend.DesktopVisualizationCallback",
-                    "init_args": {
-                        "every_n_steps": params["visual_every"],
-                        "wavelength_0": params["wavelengths"][0],
-                        "wavelength_1": params["wavelengths"][1],
-                        "wavelength_2": params["wavelengths"][2],
-                        "n_fields": params["n_fields"],
-                    },
-                },
-            ],
+            "callbacks": callbacks,
         },
     }
 

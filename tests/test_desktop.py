@@ -40,10 +40,14 @@ def test_desktop_inputs_map_to_optical_specification(tmp_path):
     assert overlay["trainer"]["max_steps"] == 20
     callback = overlay["trainer"]["callbacks"][-1]
     assert callback["class_path"] == "eadld.desktop.backend.DesktopVisualizationCallback"
+    analysis = overlay["trainer"]["callbacks"][-2]
+    assert analysis["class_path"] == "eadld.desktop.backend.DesktopAnalysisCallback"
+    assert analysis["init_args"]["every_n_steps"] == 20
+    assert callback["init_args"]["every_n_steps"] == 20
     assert overlay["model"]["optics_simulator"]["init_args"] == {
         "shape": [129, 129],
         "psf_abs_size": 0.04,
-        "psf_grid_shape": [1, 3],
+        "psf_grid_shape": [1, 5],
     }
 
 
@@ -108,14 +112,52 @@ def test_singlet_keeps_recorded_m30_phase_constraint(tmp_path):
     assert len(phase) == 1
     assert phase[0]["init_args"]["diffraction_order"] == 30
     assert phase[0]["init_args"]["design_wavelength"] == 550.0
+    assert overlay["model"]["optimization_pupil_quadrature"] is False
 
 
-def test_demo_audits_three_fields_and_three_wavelengths():
+def test_only_newer_triplet_history_uses_pupil_quadrature(tmp_path):
+    enabled = {}
+    for case, preset in CASE_PRESETS.items():
+        params = validate_parameters(preset)
+        enabled[case] = build_overlay(params, tmp_path)["model"][
+            "optimization_pupil_quadrature"
+        ]
+
+    assert enabled == {"singlet": False, "triplet": True, "four_element": False}
+
+
+def test_demo_uses_paper_field_grid_and_three_wavelengths():
     assert DEMO_DEFAULTS["demo_case"] == "four_element"
     assert DEMO_DEFAULTS["f_number"] == 2.0
     assert DEMO_DEFAULTS["half_field"] == 15.88
-    assert DEMO_DEFAULTS["n_fields"] == 3
+    assert DEMO_DEFAULTS["n_fields"] == 11
     assert DEMO_DEFAULTS["wavelength_weights"] == [1.0, 1.0, 1.0]
+    assert DEMO_DEFAULTS["steps"] == 750
+
+
+def test_four_element_keeps_sensor_and_track_constraints(tmp_path):
+    params = validate_parameters(CASE_PRESETS["four_element"])
+    residuals = build_overlay(params, tmp_path)["model"]["residuals"]
+    by_name = {item["class_path"].rsplit(".", 1)[-1]: item for item in residuals}
+
+    image_height = by_name["ImageHeightResiduals"]["init_args"]
+    assert image_height["target"] == pytest.approx(
+        params["target_efl"] * np.tan(np.deg2rad(params["half_field"]))
+    )
+    assert by_name["TotalTrackLengthResiduals"]["init_args"]["target"] == 39.3
+
+
+@pytest.mark.parametrize("case", ["singlet", "triplet", "four_element"])
+def test_every_paper_demo_refreshes_each_step(case):
+    assert CASE_PRESETS[case]["visual_every"] == 1
+
+
+def test_paper_demo_selected_zone_counts_are_exposed():
+    assert {case: preset["zone_count"] for case, preset in CASE_PRESETS.items()} == {
+        "singlet": 12,
+        "triplet": 41,
+        "four_element": 19,
+    }
 
 
 def test_command_uses_selected_promoted_design(tmp_path):
@@ -125,6 +167,7 @@ def test_command_uses_selected_promoted_design(tmp_path):
     command = build_command(overlay, design)
 
     assert CASE_MODELS["four_element"]["design"] in command
+    assert design.name == "four_element_stage4_seed.yml"
 
 
 def test_mtf_helper_normalizes_dc():
@@ -158,13 +201,13 @@ def test_mtf_frequency_stops_at_psf_nyquist_limit():
     )
 
 
-def test_desktop_command_defaults_to_cooke_chain(tmp_path):
+def test_desktop_command_defaults_to_paper_triplet_chain(tmp_path):
     config = Path("outputs") / "desktop" / "test" / "desktop.yml"
     command = build_command(Path(__file__).parents[1] / config)
 
     assert command[-1] == config.as_posix()
     assert "configs/multi_element/defaults.yml" in command
-    assert "configs/annular_triplet/designs/cooke_annular_initial.yml" in command
+    assert "configs/paper_demos/designs/triplet_prerefine.yml" in command
     assert "configs/multi_element/stage_zone_3p_fold_cooke_f28_annular_m90.yml" not in command
 
 

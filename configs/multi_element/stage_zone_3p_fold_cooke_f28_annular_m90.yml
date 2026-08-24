@@ -84,5 +84,5 @@ trainer:
   callbacks:
   - class_path: eadld.utils.callbacks.ConfigFileCallback
     init_args:
-      every_n_steps: 25
+      every_n_steps: 1
   - eadld.main.CustomProgressBar

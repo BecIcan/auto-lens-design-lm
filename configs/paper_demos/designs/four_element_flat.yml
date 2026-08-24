@@ -1,0 +1,91 @@
+# Four elements strict flat design, promoted from the recorded EISOPTX run.
+# C-mount reference; the front face of element 4 is annular. The animation starts from a strict flat-plate record, then shows a centered-wrap capability seed and LM states; it is not part of the exact integer-OPD M ablation.
+model:
+  lens_parameterization:
+    class_path: eadld.optimization.parameterization.LensParameterization
+    init_args:
+      lens_sequence: s-aRa-aRa-aRa-aRa-
+      s:
+      - 0.245988828932
+      - 2.72580801851
+      - 2.93621610251
+      - 1.25648563492
+      - 2.77897017215
+      - 3.50463579726
+      - 0.249783749059
+      - 4.5666277827
+      - 21.0354839071
+      c:
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      nd:
+      - 1.88299701908
+      - 1.78472279962
+      - 1.75500000693
+      - 1.75499998539
+      vd:
+      - 40.7643730515
+      - 25.6831527988
+      - 52.3179205847
+      - 52.3179153195
+      a:
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      d: []
+      m: []
+      z: []
+      nominal_wavelength: 587.6
+      target_efl: 28.0
+      solve_type: null
+      solve_idx: null
+      paraxial_image_solve: false
+      total_track_length_solve: null
+      qc_vars: false
+      scale_factor: 7.0
+      bezier_aspherics: false
+      glass_file: configs/recommended_ohara_glass.csv
+      misc_surface_model: null

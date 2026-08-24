@@ -66,11 +66,11 @@ trainer:
   callbacks:
     - class_path: eadld.utils.callbacks.ConfigFileCallback
       init_args:
-        every_n_steps: 10
+        every_n_steps: 1
     - eadld.main.CustomProgressBar
     - class_path: eadld.utils.visualization.VisualizationCallback
       init_args:
-        every_n_steps: 5          # optical layout recorded every 5 LM steps
+        every_n_steps: 1          # 光路、点列和 RayWave 结果每个 LM 步刷新
         visualizations:
           - class_path: eadld.utils.visualization.LensLayout
             init_args:

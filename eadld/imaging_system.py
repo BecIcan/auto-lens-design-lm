@@ -44,6 +44,7 @@ class ImagingSystemModule(pl.LightningModule):
         e2e_vector_mode: bool | None = None,
         e2e_loss_weight: float | None = None,
         e2e_loss_fn: str | tuple[str, float] = "mae",
+        optimization_pupil_quadrature: bool = True,
         # Joint optimization of image restoration model
         irm_e2e_loss_fn: str | tuple[str, float] = None,
         irm_optimizer: cli.OptimizerCallable | None = None,
@@ -66,6 +67,8 @@ class ImagingSystemModule(pl.LightningModule):
             e2e_loss_weight: Weight of the end-to-end loss; if None, it is only monitored.
             e2e_loss_fn: Image discrepancy loss function for end-to-end optimization;
                 either a string ('mae', 'mse') or a tuple ('truncated_mae', truncation_value).
+            optimization_pupil_quadrature: Apply physical pupil-area quadrature to the
+                optimization merit. Disable only when replaying a legacy recorded run.
             irm_e2e_loss_fn: Image discrepancy loss function for the IRM; if None, the same loss as e2e_loss_fn is used.
             irm_optimizer: Optimizer for the image restoration model; if not provided, the IRM is not optimized.
             irm_lr_scheduler: Learning rate scheduler for the image restoration model optimizer.
@@ -112,6 +115,7 @@ class ImagingSystemModule(pl.LightningModule):
             self.irm_e2e_loss_fn = get_image_discrepancy_loss_fn(irm_e2e_loss_fn)
         self.e2e_vector_mode = e2e_vector_mode
         self.e2e_loss_weight = e2e_loss_weight
+        self.optimization_pupil_quadrature = optimization_pupil_quadrature
         if self.e2e_vector_mode is not None:
             assert optics_simulator is not None, (
                 "OpticsSimulator must be provided if end-to-end losses are used."
@@ -204,7 +208,10 @@ class ImagingSystemModule(pl.LightningModule):
         }
         xy = r[:2]
         pupil_weights = None
-        if ray_initialization.pupil_sampling_mode == "skew_uniform_zonal":
+        if (
+            self.optimization_pupil_quadrature
+            and ray_initialization.pupil_sampling_mode == "skew_uniform_zonal"
+        ):
             epd = ray_initialization.epd
             if callable(epd):
                 epd = epd(lens.efl)

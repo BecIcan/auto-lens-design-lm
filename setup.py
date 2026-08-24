@@ -7,7 +7,7 @@ ROOT = Path(__file__).parent
 
 setup(
     name="eadld",
-    version="0.2.0",
+    version="0.3.0",
     packages=find_packages(include=("eadld", "eadld.*")),
     license="MIT",
     description="End-to-end automatic diffractive lens design with LM and RayWave",
@@ -29,4 +29,5 @@ setup(
         "torchvision",
     ],
     extras_require={"dev": ["pytest"]},
+    entry_points={"console_scripts": ["eadld-desktop=eadld.desktop.app:main"]},
 )

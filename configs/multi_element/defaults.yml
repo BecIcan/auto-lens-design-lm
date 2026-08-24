@@ -1,13 +1,11 @@
-# Visible achromatic singlet, small field.  One piece of glass: a flat front
-# face carrying an order-1 diffractive phase, and a Fresnel-folded annular back
-# face.  The fold order M and the diffractive power are chosen by
-# demo_singlet.py; this file only fixes the system specification.
+# Shared sampling, wave-propagation and logging defaults for the Cooke demo.
+# The desktop app overrides aperture, field, wavelengths and pupil sampling.
 model:
   ray_initialization:
     class_path: eadld.modeling.ray_initialization.RayInitialization
     init_args:
       aperture_type: epd
-      aperture: 12.5          # f/8 at EFL 100 mm
+      aperture: 35.7142857    # f/2.8 at EFL 100 mm
       hfov: 1.                # small field
       n_fields: 3
       pupil_sampling_mode: skew_uniform_zonal

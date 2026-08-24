@@ -4,6 +4,43 @@
 
 EADLD 将可微几何光线追迹、环带衍射拓扑、受约束 Levenberg–Marquardt（LM）优化和 RayWave 标量波动验证放在同一条设计链中。Python 包名与导入名统一为 `eadld`。
 
+## 原生桌面设计台
+
+EADLD 提供不依赖浏览器的 Windows 原生界面。系统规格区可直接切换旧项目中已经建立的单片、三片和四片工程案例，并设置焦距、F 数、视场、畸变约束和采样参数；波长采用类似 Zemax 的逐行表格，可分别设置权重和主波长。入瞳直径由焦距与 F 数实时计算。
+
+![EADLD 原生桌面优化界面](docs/assets/eadld_desktop.png)
+
+截图为四片初始处方的 20 步实时链路检查，用于展示界面更新与损失下降；归档最终 RMS 以后的独立复算表为准。
+
+```powershell
+python -m eadld.desktop
+```
+
+默认打开三片 Cooke 环带案例；演示参数打开四片 F/2 C-mount 广角案例：
+
+```powershell
+python -m eadld.desktop --demo
+```
+
+三组处方均从旧项目的实际配置迁移，系统规格和归档最终处方的独立几何复算如下。表中 RMS 是三个代表视场、三个波长合并后的几何点列半径，不是由优化损失反推的数值。
+
+| 案例 | 系统规格 | 环带设计 | 代表视场 RMS / µm |
+|---|---|---|---:|
+| [单片](configs/demo_cases/designs/singlet_final.yml) | EFL 100 mm · F/8 · ±1° | 后表面 M=30 | 3.27 / 4.66 / 7.55 |
+| [三片 Cooke](configs/annular_triplet/designs/cooke_annular_final.yml) | EFL 100 mm · F/2.8 · ±5° | 第二片前表面 M=90 | 6.31 / 8.99 / 16.17 |
+| [四片 C-mount](configs/demo_cases/designs/four_element_final.yml) | EFL 28 mm · F/2 · ±15.88° | 四组折射/环带联合优化 | 2.54 / 2.92 / 5.77 |
+
+这些归档案例原先以几何像差为优化目标。当前 RayWave 三波长复核表明，它们不能直接宣称为全视场、全波段衍射极限；界面中的 MTF 和 Strehl 是独立波动光学检查，几何 RMS 达标不会替代该检查。角向采样不足时程序会给出警告，MTF 高频端同时受 PSF 网格奈奎斯特频率限制。
+
+优化在独立子进程中运行，界面保持响应，并实时显示：
+
+- 损失函数及其收敛曲线；
+- 实时光路图；
+- 三视场点列图；每幅叠加三波长颜色和点型，并标注光谱加权 RMS 半径与 Airy 半径；
+- 三视场 RayWave MTF；每个波长分别绘制弧矢实线、子午虚线和自身截止频率对应的衍射极限点线。
+
+运行配置和结果保存在 `outputs/desktop/runs/`，该目录不纳入版本管理。
+
 ## 核心能力
 
 - 从球面、非球面或近零功率种子自动生成固定环带拓扑。
@@ -101,4 +138,4 @@ docs/         展示图与验证指标
 
 ## 来源与许可
 
-EADLD 基于 MIT 许可的 [EISOPTX / Generalized Aberrations](https://light.princeton.edu/generalized-aberrations) 开发。原许可证保留在 [LICENSE](LICENSE)，衍生工作说明见 [NOTICE.md](NOTICE.md)。论文使用时应同时引用上游工作，并明确说明 EADLD 的环带拓扑、完整光程分支约束、LM 优化和 RayWave 标量传播。
+EADLD 基于 MIT 许可的 [EISOPTX / Generalized Aberrations](https://light.princeton.edu/generalized-aberrations) 开发。原许可证保留在 [LICENSE](LICENSE)，衍生工作说明见 [NOTICE](NOTICE)。论文使用时应同时引用上游工作，并明确说明 EADLD 的环带拓扑、完整光程分支约束、LM 优化和 RayWave 标量传播。

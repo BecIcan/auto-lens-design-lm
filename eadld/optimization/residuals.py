@@ -94,7 +94,8 @@ class TransverseRayAberrationResiduals(Residuals):
             xy_centroid: Ray centroid coordinates at the image plane (shape: [2, n_fields, *, 1]).
             weights: Relative weights for rays (shape: [n_wavelengths, 1]).
         """
-        ray_valid = xy.isfinite()
+        bundle_valid = xy.isfinite().all(dim=0)
+        ray_valid = bundle_valid.broadcast_to(xy.shape)
         delta_xy = xy - xy_centroid
 
         # Normalize by weights
@@ -110,8 +111,13 @@ class TransverseRayAberrationResiduals(Residuals):
 
         # Normalize by the square root of the number of rays (which will be squared in the sum of squares)
         weighted_valid_rays = (ray_valid_weighted**2).sum() / 2
-        residuals = delta_xy_weighted[ray_valid] / weighted_valid_rays.sqrt()
-        return residuals
+        normalization = weighted_valid_rays.clamp_min(
+            torch.finfo(xy.dtype).eps
+        ).sqrt()
+        residuals = delta_xy_weighted.where(ray_valid, 0.0).reshape(-1) / normalization
+        # 固定维度的丢光惩罚防止优化器通过让全部光线失效来获得空残差。
+        invalid_penalty = (~bundle_valid).to(xy).mean().sqrt().reshape(1)
+        return torch.cat((residuals, invalid_penalty))
 
 
 class RayBoundaryResiduals(Residuals):

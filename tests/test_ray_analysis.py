@@ -2,6 +2,7 @@ import torch
 
 from eadld.imaging_system import _combine_ray_weights
 from eadld.modeling import ray_analysis as ra
+from eadld.optimization.residuals import TransverseRayAberrationResiduals
 
 
 def test_rms_ignores_invalid_rays_without_rewarding_failures():
@@ -12,6 +13,28 @@ def test_rms_ignores_invalid_rays_without_rewarding_failures():
     rms = ra.compute_rms_spot_size(x, y, valid, reduce_dims=(0,), eps=0.0)
 
     assert torch.allclose(rms, torch.tensor(1.0, dtype=torch.float64))
+
+
+def test_rms_ignores_infinite_failed_rays():
+    x = torch.tensor([0.0, 1.0, float("inf")], dtype=torch.float64)
+    y = torch.zeros_like(x)
+    valid = torch.tensor([True, True, False])
+
+    rms = ra.compute_rms_spot_size(x, y, valid, reduce_dims=(0,), eps=0.0)
+
+    assert torch.isfinite(rms)
+    assert torch.allclose(rms, torch.tensor(0.5**0.5, dtype=torch.float64))
+
+
+def test_transverse_residual_penalizes_complete_ray_failure():
+    xy = torch.full((2, 1, 4, 3, 1), float("inf"), dtype=torch.float64)
+    centroid = torch.zeros((2, 1, 1, 1, 1), dtype=torch.float64)
+
+    residual = TransverseRayAberrationResiduals(weight=1.0)(xy, centroid)
+
+    assert residual.shape == (xy.numel() + 1,)
+    assert torch.all(residual[:-1] == 0)
+    assert residual[-1].item() == 1.0
 
 
 def test_weighted_rms_matches_area_equivalent_duplicated_samples():

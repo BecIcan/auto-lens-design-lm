@@ -11,7 +11,7 @@ from pytorch_lightning import callbacks
 import pytorch_lightning as pl
 import torchvision.utils
 
-from eadld.imaging_system import ImagingSystemModule
+from eadld.imaging_system import ImagingSystemModule, _combine_ray_weights
 from eadld.modeling import (
     simulation as sim,
     misc_surfaces as ms,
@@ -777,6 +777,18 @@ class RayFanPlot(Visualization):
         return fig
 
 
+def _format_length_um(value: float) -> str:
+    """显示小尺寸时保留有效数字，避免真实非零值被写成 0.0。"""
+    value = abs(value)
+    if value >= 100:
+        return f"{value:.1f}"
+    if value >= 1:
+        return f"{value:.2f}"
+    if value >= 0.01:
+        return f"{value:.3f}"
+    return f"{value:.3g}"
+
+
 class SpotDiagrams(Visualization):
     """Plot the spot diagrams for the given fields and wavelengths."""
 
@@ -815,48 +827,106 @@ class SpotDiagrams(Visualization):
             imaging_system.compute_residuals_dict_and_logs()
         xy = imaging_system.last_xy
         xy = xy[:, self.field_indices]
+        spectral_weights = imaging_system.wavelength_weights
         x, y = xy
         ray_valid = torch.isfinite(xy).all(dim=0)
+        ray_initialization = imaging_system.ray_initialization.convert_to_absolute(
+            imaging_system.lens
+        )
+        pupil_weights = None
+        if ray_initialization.pupil_sampling_mode == "skew_uniform_zonal":
+            epd = ray_initialization.epd
+            if callable(epd):
+                epd = epd(imaging_system.lens.efl)
+            pupil_weights = ri.zonal_pupil_weights(
+                zone_edges=ri.zone_edges_from_lens(imaging_system.lens, epd),
+                **ray_initialization.pupil_sampling_kwargs,
+            ).to(xy).view(1, -1, 1, 1)
+        ray_weights = _combine_ray_weights(
+            spectral_weights, pupil_weights
+        )
+        rms = ra.compute_rms_spot_size(
+            x, y, ray_valid, (1, 2), weights=ray_weights
+        )
         y_centroid = ra.evaluate_mean_ray_height(
-            y, ray_valid, (1, 2), imaging_system.wavelength_weights
+            y, ray_valid, (1, 2), ray_weights
         )
         y = y - y_centroid.expand_as(y).where(ray_valid, 0.0)
         x = x.cpu()
         y = y.cpu()
+        ray_valid = ray_valid.cpu()
 
         # Specs
         n_fields = x.shape[0]
+        if n_fields == 1:
+            fig.set_size_inches(4.8, 4.0)
         ray_initialization = imaging_system.ray_initialization
         hfov = ray_initialization.hfov
         fields = np.linspace(0, hfov, ray_initialization.n_fields)[self.field_indices]
-        wavelengths = imaging_system.ray_initialization.wavelengths
+        wavelengths = np.asarray(imaging_system.ray_initialization.wavelengths)
+        wavelengths = wavelengths.tolist()
+        wavelength_colors = wavelengths2color(np.asarray(wavelengths))
+        primary_index = (
+            int(spectral_weights.flatten().argmax().item())
+            if spectral_weights is not None
+            else len(wavelengths) // 2
+        )
+        epd = float(ray_initialization.convert_to_absolute(imaging_system.lens).epd)
+        target_efl = float(
+            torch.as_tensor(imaging_system.parameterization.target_efl)
+            .abs()
+            .mean()
+            .cpu()
+        )
+        airy_radius_um = (
+            1.22 * wavelengths[primary_index] * 1e-3 * target_efl / epd
+        )
 
         # Plot
         n_rows = self.n_rows or int(np.floor(np.sqrt(n_fields)))
         n_cols = int(np.ceil(n_fields / n_rows))
-        rays_per_field = x[0].numel() * 2
-        colors = wavelengths2color(
-            np.array(wavelengths * (rays_per_field // len(wavelengths)))
-        )
         axes = fig.subplots(n_rows, n_cols, sharex="all", sharey="all", squeeze=False)
         for i, (ax, xx, yy) in enumerate(zip(axes.flat, x.unbind(), y.unbind())):
-            xx = torch.stack((-xx, xx), dim=1)
-            yy = torch.stack((yy, yy), dim=1)
-            ax.axvline(0, c="gray", alpha=0.5, lw=0.5)
-            ax.axhline(0, c="gray", alpha=0.5, lw=0.5)
-            ax.scatter(
-                xx.view(-1) * 1000,
-                yy.view(-1) * 1000,
-                c=colors,
-                s=1 / 8,
-                alpha=0.25,
-                rasterized=True,
+            ax.set_facecolor("#F8FAFC")
+            ax.axvline(0, c="#AAB7C7", alpha=0.8, lw=0.6)
+            ax.axhline(0, c="#AAB7C7", alpha=0.8, lw=0.6)
+            markers = (".", "x", "+")
+            for wavelength_index, (wavelength, color) in enumerate(
+                zip(wavelengths, wavelength_colors)
+            ):
+                valid = ray_valid[i, :, wavelength_index, :]
+                wave_x = xx[:, wavelength_index, :][valid]
+                wave_y = yy[:, wavelength_index, :][valid]
+                ax.scatter(
+                    torch.cat((-wave_x, wave_x)) * 1000,
+                    torch.cat((wave_y, wave_y)) * 1000,
+                    color=color,
+                    marker=markers[wavelength_index % len(markers)],
+                    s=1.4,
+                    linewidths=0.25,
+                    alpha=0.72,
+                    rasterized=True,
+                    label=f"{wavelength:.1f} nm" if i == 0 else None,
+                )
+            ax.add_patch(
+                mpl.patches.Circle(
+                    (0, 0),
+                    airy_radius_um,
+                    fill=False,
+                    color="#0D1C2E",
+                    linewidth=0.9,
+                    linestyle=":",
+                    label="Airy" if i == 0 else None,
+                )
             )
             ax.set_aspect("equal")
+            ax.tick_params(colors="#718096", labelsize=7, length=2)
+            for spine in ax.spines.values():
+                spine.set_color("#CBD5E1")
             ax.text(
                 1 / 32,
                 31 / 32,
-                f"{fields[i]:.1f}°",
+                f"{fields[i]:.2f}°",
                 ha="left",
                 va="top",
                 transform=ax.transAxes,
@@ -864,17 +934,25 @@ class SpotDiagrams(Visualization):
             ax.text(
                 1 / 32,
                 1 / 32,
-                r"$\overline{y} = $" + f"{y_centroid[i].abs().item():.2f} mm",
+                f"RMS  {_format_length_um(rms[i].item() * 1e3)} μm",
                 ha="left",
                 va="bottom",
                 transform=ax.transAxes,
                 fontsize="small",
+                color="#0D1C2E",
+                bbox={
+                    "boxstyle": "round,pad=0.3",
+                    "facecolor": "white",
+                    "edgecolor": "#DCE4ED",
+                    "alpha": 0.92,
+                },
             )
         # Remove empty axes
         for i in range(n_fields, n_cols * n_rows):
             fig.delaxes(axes.flat[i])
         fig.supxlabel("x [\u03bcm]")
         fig.supylabel("y [\u03bcm]")
+        axes.flat[0].legend(frameon=False, fontsize=6.5, loc="upper right")
         return fig
 
 
@@ -1069,6 +1147,175 @@ class PSFs(Visualization):
         # Scale bar
         if not self.no_labels:
             add_psf_scale_bar(axes[-1, 0], size)
+        return fig
+
+
+def compute_mtf_slices(psf, sample_pitch_mm):
+    """从中心采样 PSF 返回正频率方向的弧矢与子午 MTF。"""
+    psf = np.asarray(psf, dtype=float)
+    if psf.ndim != 2 or min(psf.shape) < 3:
+        raise ValueError("PSF must be a two-dimensional image.")
+    otf = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(psf)))
+    mtf = np.abs(otf)
+    cy, cx = np.array(mtf.shape) // 2
+    mtf /= max(mtf[cy, cx], np.finfo(float).eps)
+    fx = np.fft.fftshift(np.fft.fftfreq(psf.shape[1], sample_pitch_mm))
+    fy = np.fft.fftshift(np.fft.fftfreq(psf.shape[0], sample_pitch_mm))
+    return fx[cx:], mtf[cy, cx:], fy[cy:], mtf[cy:, cx]
+
+
+def diffraction_limited_mtf(frequency, wavelength_nm, f_number):
+    """圆形非相干孔径的理论衍射极限 MTF。"""
+    cutoff = 1.0 / (float(wavelength_nm) * 1e-6 * float(f_number))
+    normalized = np.clip(np.asarray(frequency, dtype=float) / cutoff, 0.0, 1.0)
+    mtf = 2.0 / np.pi * (
+        np.arccos(normalized) - normalized * np.sqrt(1.0 - normalized**2)
+    )
+    return np.where(np.asarray(frequency) <= cutoff, mtf, 0.0)
+
+
+def mtf_frequency_limit(wavelengths, f_number, sample_pitch):
+    """Return the lower of the optical cutoff and sampled PSF Nyquist limit."""
+    optical_cutoff = max(
+        1.0 / (float(wavelength) * 1e-6 * f_number)
+        for wavelength in wavelengths
+    )
+    return min(optical_cutoff, 0.5 / sample_pitch)
+
+
+class WaveMTF(Visualization):
+    """用 RayWave PSF 绘制弧矢、子午 MTF 与圆孔衍射极限。"""
+
+    name = "mtf"
+
+    def __init__(
+        self,
+        field_indices: list[int] | None = None,
+        rc_params: dict | None = None,
+    ):
+        super().__init__(rc_params)
+        self.field_indices = (
+            field_indices if field_indices is not None else slice(None, None)
+        )
+
+    def generate_figure(
+        self,
+        trainer: pl.Trainer,
+        imaging_system: ImagingSystemModule,
+        fig: mpl.figure.Figure = None,
+    ):
+        del trainer
+        simulator = imaging_system.optics_simulator
+        if simulator is None or simulator.psf_mode != "ray_wave":
+            raise ValueError("WaveMTF requires a RayWave optics simulator.")
+        if imaging_system.last_psfs is None or not imaging_system.psfs_updated:
+            imaging_system.try_build_simulation_model()
+
+        psfs = imaging_system.last_psfs[self.field_indices, 0]
+        mono = psfs / psfs.sum(dim=(-2, -1), keepdim=True).clip(min=1e-30)
+        strehl = psfs.amax(dim=(-2, -1)).detach().cpu().numpy()
+
+        specs = imaging_system.ray_initialization.convert_to_absolute(
+            imaging_system.lens
+        )
+        epd = specs.epd
+        if callable(epd):
+            epd = epd(imaging_system.lens.efl)
+        target_efl = imaging_system.parameterization.target_efl
+        target_efl = float(torch.as_tensor(target_efl).abs().mean().cpu())
+        f_number = target_efl / float(epd)
+        wavelengths = np.asarray(specs.wavelengths, dtype=float)
+        wavelength_colors = wavelengths2color(wavelengths)
+        fields = np.linspace(0, specs.hfov, specs.n_fields)[self.field_indices]
+        pitch = float(simulator.psf_abs_size[0] / simulator.psf_shape[0])
+
+        if fig is None:
+            fig = mpl.figure.Figure()
+        fig.set_size_inches(6.0, max(3.8, 1.9 * len(fields)))
+        axes = fig.subplots(
+            len(fields), 1, sharex=True, sharey=True, squeeze=False
+        )[:, 0]
+        # PSF 网格无法表示超过奈奎斯特频率的信息，高频曲线必须在此截断。
+        max_frequency = mtf_frequency_limit(wavelengths, f_number, pitch)
+        mono = mono.detach().cpu().numpy()
+        for field_index, (ax, field_psfs, field) in enumerate(
+            zip(axes, mono, fields)
+        ):
+            for wavelength_index, (psf, wavelength, color) in enumerate(
+                zip(field_psfs, wavelengths, wavelength_colors)
+            ):
+                fx, sagittal, fy, tangential = compute_mtf_slices(psf, pitch)
+                frequency = fx[fx <= max_frequency * 1.05]
+                ax.plot(
+                    frequency,
+                    sagittal[: len(frequency)],
+                    color=color,
+                    lw=1.55,
+                    label=f"{wavelength:.1f} nm" if field_index == 0 else None,
+                )
+                ax.plot(
+                    frequency,
+                    tangential[: len(frequency)],
+                    color=color,
+                    lw=1.35,
+                    linestyle="--",
+                )
+                # 每个波长使用各自的衍射截止频率，不能以主波长代替。
+                ax.plot(
+                    frequency,
+                    diffraction_limited_mtf(frequency, wavelength, f_number),
+                    color=color,
+                    lw=1.0,
+                    linestyle=":",
+                    alpha=0.9,
+                )
+            ax.set(
+                xlim=(0, max_frequency * 1.05),
+                ylim=(0, 1.03),
+                ylabel="MTF",
+            )
+            ax.set_title(
+                f"F{field_index + 1}  ·  {field:.2f}°",
+                loc="left",
+                fontsize=8,
+                color="#0D1C2E",
+            )
+            ax.text(
+                0.99,
+                0.92,
+                "SR  " + " / ".join(f"{value:.3f}" for value in strehl[field_index]),
+                transform=ax.transAxes,
+                ha="right",
+                va="top",
+                fontsize=6.5,
+                color="#526176",
+            )
+            ax.set_facecolor("#F8FAFC")
+            ax.grid(True, color="#DCE4ED", linewidth=0.7, alpha=0.8)
+            ax.tick_params(colors="#718096", labelsize=7, length=0)
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+        axes[-1].set_xlabel("Spatial frequency [lp/mm]")
+        wavelength_handles = [
+            mpl.lines.Line2D([], [], color=color, lw=1.6, label=f"{wavelength:.1f} nm")
+            for wavelength, color in zip(wavelengths, wavelength_colors)
+        ]
+        style_handles = [
+            mpl.lines.Line2D([], [], color="#526176", lw=1.5, label="S"),
+            mpl.lines.Line2D(
+                [], [], color="#526176", lw=1.5, linestyle="--", label="T"
+            ),
+            mpl.lines.Line2D(
+                [], [], color="#526176", lw=1.2, linestyle=":", label="Diff."
+            ),
+        ]
+        axes[0].legend(
+            handles=wavelength_handles + style_handles,
+            frameon=False,
+            fontsize=6,
+            ncol=3,
+            loc="lower left",
+        )
         return fig
 
 
@@ -1844,7 +2091,7 @@ def plot_layout(
 
 def wavelengths2color(
     wavelengths: list[float] | np.ndarray,
-    cmap: mpl.colors.Colormap = mpl.cm.get_cmap("nipy_spectral"),
+    cmap: mpl.colors.Colormap = mpl.colormaps["nipy_spectral"],
 ):
     """Convert wavelengths to colors using a colormap.
 

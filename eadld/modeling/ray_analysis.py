@@ -58,8 +58,9 @@ def evaluate_transverse_ray_aberrations(
 
     # Center rays and set invalid rays to 0
     y = y - y_centroid
-    x = x * ray_valid
-    y = y * ray_valid
+    # ``inf * 0`` is NaN; failed rays must be replaced rather than multiplied out.
+    x = x.where(ray_valid, 0.0)
+    y = y.where(ray_valid, 0.0)
 
     return x, y
 

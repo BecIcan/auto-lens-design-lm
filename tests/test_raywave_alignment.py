@@ -1,6 +1,6 @@
 """Alignment of the ray-wave path against the RayWave / MATLAB reference.
 
-add by cjy.
+
 
 Reference: ``deeplens.raywave`` in the AutoLens project, configuration
 ``configs/raywave/annule_offaxis_inline.json``.  That implementation is itself
@@ -33,9 +33,9 @@ import math
 import pytest
 import torch
 
-from eisoptx.modeling import optics
-from eisoptx.modeling import ray_analysis as ra
-from eisoptx.modeling.simulation import PSFSampler
+from eadld.modeling import optics
+from eadld.modeling import ray_analysis as ra
+from eadld.modeling.simulation import PSFSampler
 
 WAVELENGTHS_NM = [550.0, 650.0, 750.0]
 DESIGN_INDEX = 1

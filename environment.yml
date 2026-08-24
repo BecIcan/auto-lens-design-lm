@@ -1,4 +1,4 @@
-name: lm-annular
+name: eadld
 channels:
   - pytorch
   - nvidia

@@ -1,8 +1,10 @@
+"""受约束 LM 的可行步与接受准则测试。"""
+
 from types import SimpleNamespace
 
 import torch
 
-from eisoptx.optimization.optimizers import LMOptimizer
+from eadld.optimization.optimizers import LMOptimizer
 
 
 DTYPE = torch.float64
@@ -46,6 +48,7 @@ def test_lm_null_space_step_satisfies_linear_constraint_and_reduces_loss():
 
     optimizer.step(wrapped_closure)
 
+    # A dx = -c 保证 x+y=2；零空间步骤只能沿约束流形降低目标。
     torch.testing.assert_close(parameter.sum(), torch.tensor(2.0, dtype=DTYPE))
     assert closure.evaluate_least_squares_loss() < initial_loss
     assert optimizer.logs["constraint_rank"] == 1
@@ -95,6 +98,7 @@ def test_lm_rejects_step_that_worsens_nonlinear_constraint():
 
     optimizer.step(wrapped_closure)
 
+    # 线性化步若破坏真实非线性约束，必须回滚参数。
     torch.testing.assert_close(parameter, before)
     assert optimizer.logs["constraint_accepted"] == 0
     assert optimizer.logs["step_accepted"] == 0

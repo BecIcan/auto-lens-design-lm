@@ -1,6 +1,6 @@
 model:
   lens_parameterization:
-    class_path: eisoptx.optimization.parameterization.LensParameterization
+    class_path: eadld.optimization.parameterization.LensParameterization
     init_args:
       lens_sequence: s-aRa-zRa-aRa-
       s:

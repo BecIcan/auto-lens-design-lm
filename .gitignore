@@ -30,6 +30,7 @@ tensorboard/
 outputs/
 artifacts/
 tmp/
+None/
 *.tmp
 *.log
 events.out.tfevents.*

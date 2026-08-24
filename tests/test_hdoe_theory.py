@@ -1,3 +1,9 @@
+"""HDOE 论文公式回归测试。
+
+锁定 `W(r_i)=i M lambda_0`、`alpha(lambda)` 和
+`eta_m=sinc^2(alpha-m)`，防止实现与论文定义漂移。
+"""
+
 import importlib.util
 import sys
 from pathlib import Path
@@ -6,7 +12,7 @@ import numpy as np
 import pytest
 import yaml
 
-from eisoptx.optimization.hdoe import (
+from eadld.optimization.hdoe import (
     harmonic_zone_count,
     harmonic_zone_edges,
     ideal_opd,
@@ -26,6 +32,7 @@ def test_internal_zone_edges_invert_exact_parent_opd():
     edges = harmonic_zone_edges(25.0, 100.0, order, wavelength_nm)
     period = order * wavelength_nm * 1e-6
 
+    # 每个内部边界必须精确落在整数个 M*lambda_0 光程周期上。
     np.testing.assert_allclose(
         ideal_opd(edges[:-1], 100.0),
         np.arange(1, edges.size) * period,

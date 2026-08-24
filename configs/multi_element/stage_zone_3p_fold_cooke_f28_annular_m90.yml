@@ -38,13 +38,13 @@ model:
             - true
             - true
   residuals:
-  - class_path: eisoptx.optimization.residuals.TransverseRayAberrationResiduals
+  - class_path: eadld.optimization.residuals.TransverseRayAberrationResiduals
     init_args:
       weight: 1.0
-  - class_path: eisoptx.optimization.residuals.GlassVariableResiduals
+  - class_path: eadld.optimization.residuals.GlassVariableResiduals
     init_args:
       weight: 0.001
-  - class_path: eisoptx.optimization.residuals.RayPathResiduals
+  - class_path: eadld.optimization.residuals.RayPathResiduals
     init_args:
       weight: 10.0
       min_cutoff: 0.5
@@ -56,20 +56,20 @@ model:
       max_cutoff_refractive: 15.0
       min_cutoff_refractive_relative: 0.0
       max_cutoff_refractive_relative: 100.0
-  - class_path: eisoptx.optimization.residuals.DistortionResiduals
+  - class_path: eadld.optimization.residuals.DistortionResiduals
     init_args:
       weight: 10.0
       threshold: 0.01
-  - class_path: eisoptx.optimization.residuals.SurfaceNormalResiduals
+  - class_path: eadld.optimization.residuals.SurfaceNormalResiduals
     init_args:
       weight: 10.0
       max_angle: 30.0
-  - class_path: eisoptx.optimization.residuals.RayAngleResiduals
+  - class_path: eadld.optimization.residuals.RayAngleResiduals
     init_args:
       weight: 10.0
       max_angle: 60.0
   lens_optimizer:
-    class_path: eisoptx.optimization.optimizers.LMOptimizer
+    class_path: eadld.optimization.optimizers.LMOptimizer
     init_args:
       lm_parameter: 1.0
       damped_term_min: 1.0e-06
@@ -82,7 +82,7 @@ trainer:
   log_every_n_steps: 1
   check_val_every_n_epoch: null
   callbacks:
-  - class_path: eisoptx.utils.callbacks.ConfigFileCallback
+  - class_path: eadld.utils.callbacks.ConfigFileCallback
     init_args:
       every_n_steps: 25
-  - eisoptx.main.CustomProgressBar
+  - eadld.main.CustomProgressBar

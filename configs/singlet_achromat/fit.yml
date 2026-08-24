@@ -1,6 +1,6 @@
-# LM stage for the generated singlet.  Load last:
-#   python -m eisoptx.main fit -c configs/singlet_achromat/defaults.yml \
-#       -c configs/singlet_achromat/designs/generated.yml \
+# LM stage for the singlet generated under outputs/.  Load last:
+#   python -m eadld.main fit -c configs/singlet_achromat/defaults.yml \
+#       -c outputs/singlet_achromat/generated.yml \
 #       -c configs/singlet_achromat/fit.yml
 # Free: image distance, weak starting curvatures, and all non-gauge zonal shape
 # variables.  Frozen: element thickness, catalog glass, all Rmax (topology), and
@@ -26,18 +26,18 @@ model:
         z:
           - - [False, False, False, True]
   residuals:
-    - class_path: eisoptx.optimization.residuals.TransverseRayAberrationResiduals
+    - class_path: eadld.optimization.residuals.TransverseRayAberrationResiduals
       init_args:
         weight: 1.
-    - class_path: eisoptx.optimization.residuals.FocalLengthResiduals
+    - class_path: eadld.optimization.residuals.FocalLengthResiduals
       init_args:
         # Power is in 1/mm; sqrt(1e6)=1000 balances it against mm spot errors.
         weight: 1.e6
-    - class_path: eisoptx.optimization.residuals.DistortionResiduals
+    - class_path: eadld.optimization.residuals.DistortionResiduals
       init_args:
         weight: 10.
         threshold: 0.02
-    - class_path: eisoptx.optimization.residuals.HDOEPhaseResiduals
+    - class_path: eadld.optimization.residuals.HDOEPhaseResiduals
       init_args:
         weight: 1.e6
         diffraction_order: 30
@@ -45,7 +45,7 @@ model:
         zonal_surface_index: 0
         field_indices: [0]
   lens_optimizer:
-    class_path: eisoptx.optimization.optimizers.LMOptimizer
+    class_path: eadld.optimization.optimizers.LMOptimizer
     init_args:
       lm_parameter: 1.
       damped_term_min: 1.e-6
@@ -64,27 +64,27 @@ trainer:
   log_every_n_steps: 1
   check_val_every_n_epoch:
   callbacks:
-    - class_path: eisoptx.utils.callbacks.ConfigFileCallback
+    - class_path: eadld.utils.callbacks.ConfigFileCallback
       init_args:
         every_n_steps: 10
-    - eisoptx.main.CustomProgressBar
-    - class_path: eisoptx.utils.visualization.VisualizationCallback
+    - eadld.main.CustomProgressBar
+    - class_path: eadld.utils.visualization.VisualizationCallback
       init_args:
         every_n_steps: 5          # optical layout recorded every 5 LM steps
         visualizations:
-          - class_path: eisoptx.utils.visualization.LensLayout
+          - class_path: eadld.utils.visualization.LensLayout
             init_args:
               wavelengths: [486.1, 656.3, 550.]
               n_fields: 3
               n_rays: 5
-          - class_path: eisoptx.utils.visualization.ZonalSurfaceProfile
+          - class_path: eadld.utils.visualization.ZonalSurfaceProfile
             init_args:
               idx: 0
               show_change: True
-          - class_path: eisoptx.utils.visualization.SpotDiagrams
+          - class_path: eadld.utils.visualization.SpotDiagrams
             init_args:
               field_indices: [0, 1, 2]
-          - class_path: eisoptx.utils.visualization.PSFs
+          - class_path: eadld.utils.visualization.PSFs
             init_args:
               wavelength_indices: [0, 1, 2]
               field_indices: [0, 1, 2]

@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from eisoptx.modeling import optics, ray_tracing
-from eisoptx.optimization.parameterization import LensParameterization
+from eadld.modeling import optics, ray_tracing
+from eadld.optimization.parameterization import LensParameterization
 
 
 def test_zonal_modifier_attaches_to_existing_surface_events():
@@ -68,8 +68,7 @@ def test_zonal_marching_keeps_fixed_zone_coefficients_differentiable():
     assert (zones.grad[0, 0, :3] != 0).all()
 
 
-# add by cjy: the assembled profile can be crossed twice by a tilted ray, and a
-# ray aimed at a step can miss every facet.  Pin both outcomes.
+# 倾斜光线可能与拼接面相交两次，也可能正好打在台阶侧壁；两种情况都要锁定。
 def test_zonal_marching_takes_nearest_facet_and_flags_sidewall_rays():
     curvature = torch.tensor([0.0])
     # Flat facets: zone 0 at z = 0 for r <= 1, zone 1 at z = 0.5 for 1 < r <= 2.

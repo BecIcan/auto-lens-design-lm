@@ -5,11 +5,11 @@ import pytest
 import torch
 import yaml
 
-from eisoptx.modeling import optics
-from eisoptx.modeling.ray_initialization import RayInitialization, skew_uniform
-from eisoptx.modeling.simulation import OpticsSimulator, PSFSampler
-from eisoptx.optimization.parameterization import LensParameterization
-from eisoptx.optimization.residuals import (
+from eadld.modeling import optics
+from eadld.modeling.ray_initialization import RayInitialization, skew_uniform
+from eadld.modeling.simulation import OpticsSimulator, PSFSampler
+from eadld.optimization.parameterization import LensParameterization
+from eadld.optimization.residuals import (
     CoherentWavefrontResiduals,
     HDOEBranchConstraintResiduals,
     HDOEBranchResiduals,

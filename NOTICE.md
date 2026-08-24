@@ -1,6 +1,7 @@
 # Third-party notice and derivative-work summary
 
-LM Annular is derived from the EISOPTX / Generalized Aberrations project:
+EADLD (End-to-End Auto Diffractive Lens Design) is derived from the
+EISOPTX / Generalized Aberrations project:
 
 - Project page: https://light.princeton.edu/generalized-aberrations
 - Original license: MIT

@@ -29,15 +29,15 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from eisoptx.modeling import optics  # noqa: E402
-from eisoptx.modeling import ray_initialization as ri  # noqa: E402
-from eisoptx.optimization.hdoe import harmonic_zone_edges  # noqa: E402
+from eadld.modeling import optics  # noqa: E402
+from eadld.modeling import ray_initialization as ri  # noqa: E402
+from eadld.optimization.hdoe import harmonic_zone_edges  # noqa: E402
 
 torch.set_default_dtype(torch.float64)
 
 
 # ---------------------------------------------------------------- specification
-# add by cjy: F number comes from the command line.  Everything scales with it --
+# F number comes from the command line.  Everything scales with it --
 # aperture, zone count, pupil sampling and the size of the LM Jacobian -- so the
 # sampling is derived from the zone count rather than fixed (see sampling()).
 EFL = 100.0
@@ -55,7 +55,7 @@ THICKNESS = 3.0
 SEED = 42
 CURVATURE_SCALE = 1e-3
 MIN_ZONE_WIDTH = 0.020  # mm
-# add by cjy: the LM Jacobian is [n_residuals, 2 * n_zones] and the sampling
+# the LM Jacobian is [n_residuals, 2 * n_zones] and the sampling
 # grows with the zone count too, so cost goes as the square.  144 zones at f/5.6
 # filled a 24 GB card; 96 is the largest that stays comfortable.  Nothing is
 # lost by capping it -- the spot is flat across M (28.19-28.23 um at f/8,
@@ -68,7 +68,7 @@ MAX_ZONES = 96
 ORDERS = (30,)
 LM_STEPS = 300
 
-HERE = Path(__file__).resolve().parent
+GENERATED_DESIGN = ROOT / "outputs" / "singlet_achromat" / "generated.yml"
 RADIUS = EFL / (2 * F_NUMBER)
 LAM0 = DESIGN * 1e-6
 
@@ -76,7 +76,7 @@ LAM0 = DESIGN * 1e-6
 def zone_radii(order):
     """Exact spherical-OPD zone boundaries for this fold order."""
     edges = harmonic_zone_edges(RADIUS, EFL, order, DESIGN).tolist()
-    # add by cjy: the aperture almost never lands on a fold boundary, so the
+    # the aperture almost never lands on a fold boundary, so the
     # outermost zone is a partial one of arbitrary width.  At f/8 that sliver
     # only made the sweep noisy; at f/4 it rejected M = 5, 10 and 20 outright and
     # pushed the reported aspect ratio to 9.2 -- all of it truncation, not
@@ -90,7 +90,7 @@ def widths(edges):
     return [b - a for a, b in zip([0.0] + edges[:-1], edges)]
 
 
-# add by cjy: a zone that no ray lands in is invisible to the residual, so the
+# a zone that no ray lands in is invisible to the residual, so the
 # radial sampling has to follow the zone count instead of staying at 96.  The
 # fitting stage runs leaner than the evaluation because the LM Jacobian is
 # [n_residuals, n_free] and both factors grow with the zone count.
@@ -119,7 +119,7 @@ def write_near_flat_start(order, path, seed=SEED):
     config = {
         "model": {
             "lens_parameterization": {
-                "class_path": "eisoptx.optimization.parameterization.LensParameterization",
+                "class_path": "eadld.optimization.parameterization.LensParameterization",
                 "init_args": {
                     "lens_sequence": "sdRz-",
                     "s": [THICKNESS, EFL],
@@ -228,13 +228,13 @@ def run_lm(design, n_zones):
     """
     root = ROOT / "logs" / "singlet_achromat" / "sdRz-"
     before = {path.name for path in root.glob("version_*")} if root.exists() else set()
-    # add by cjy: defaults.yml pins the f/8 aperture and a fixed 96x64 pupil, both
+    # defaults.yml pins the f/8 aperture and a fixed 96x64 pupil, both
     # of which have to follow the F number and the zone count.
     result = subprocess.run(
         [
             sys.executable,
             "-m",
-            "eisoptx.main",
+            "eadld.main",
             "fit",
             "-c",
             "configs/singlet_achromat/defaults.yml",
@@ -295,7 +295,8 @@ def main():
         edges = zone_radii(order)
         if min(widths(edges)) < MIN_ZONE_WIDTH or len(edges) > MAX_ZONES:
             continue
-        design = HERE / "designs" / "generated.yml"
+        # 生成处方属于运行产物，放在忽略目录中，示例执行后不会污染仓库。
+        design = GENERATED_DESIGN
         write_near_flat_start(order, design)
         snapshot, run = run_lm(design, len(edges))
         lens = lens_from_parameters(snapshot)

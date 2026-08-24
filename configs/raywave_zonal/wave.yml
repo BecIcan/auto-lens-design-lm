@@ -1,5 +1,5 @@
 # Scalar ray-wave validation overlay. Load after defaults.yml and a design file:
-# python -m eisoptx.main test -c configs/raywave_zonal/defaults.yml -c configs/raywave_zonal/designs/visible_f100_f2_m480.yml -c configs/raywave_zonal/wave.yml
+# python -m eadld.main test -c configs/raywave_zonal/defaults.yml -c configs/raywave_zonal/designs/visible_f100_f2_m480.yml -c configs/raywave_zonal/wave.yml
 model:
   ray_initialization:
     init_args:
@@ -35,25 +35,25 @@ trainer:
   max_steps: 1
   precision: 64
   callbacks:
-    - eisoptx.utils.callbacks.ConfigFileCallback
-    - eisoptx.main.CustomProgressBar
-    - class_path: eisoptx.utils.visualization.VisualizationCallback
+    - eadld.utils.callbacks.ConfigFileCallback
+    - eadld.main.CustomProgressBar
+    - class_path: eadld.utils.visualization.VisualizationCallback
       init_args:
         every_n_steps: 1
         visualizations:
-          - class_path: eisoptx.utils.visualization.LensLayout
+          - class_path: eadld.utils.visualization.LensLayout
             init_args:
               wavelengths: [550., 550., 550.]
               n_fields: 1
               n_rays: 3
-          - class_path: eisoptx.utils.visualization.ZonalSurfaceProfile
+          - class_path: eadld.utils.visualization.ZonalSurfaceProfile
             init_args:
               idx: 0
               sag_limits: [-0.22, 0.02]
-          - class_path: eisoptx.utils.visualization.SpotDiagrams
+          - class_path: eadld.utils.visualization.SpotDiagrams
             init_args:
               field_indices: [0]
-          - class_path: eisoptx.utils.visualization.PSFs
+          - class_path: eadld.utils.visualization.PSFs
             init_args:
               wavelength_indices: [0]
               field_indices: [0]

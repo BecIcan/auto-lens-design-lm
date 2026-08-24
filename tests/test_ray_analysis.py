@@ -1,6 +1,7 @@
 import torch
 
-from eisoptx.modeling import ray_analysis as ra
+from eadld.imaging_system import _combine_ray_weights
+from eadld.modeling import ray_analysis as ra
 
 
 def test_rms_ignores_invalid_rays_without_rewarding_failures():
@@ -35,3 +36,10 @@ def test_weighted_rms_matches_area_equivalent_duplicated_samples():
     )
 
     assert torch.allclose(weighted, duplicated)
+
+
+def test_zonal_pupil_weights_work_without_spectral_weights():
+    """未设置光谱权重时，环带面积权重仍必须独立生效。"""
+    pupil = torch.tensor([1.0, 3.0], dtype=torch.float64)
+
+    assert _combine_ray_weights(None, pupil) is pupil

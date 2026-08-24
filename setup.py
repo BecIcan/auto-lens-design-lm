@@ -6,11 +6,11 @@ from setuptools import find_packages, setup
 ROOT = Path(__file__).parent
 
 setup(
-    name="lm-annular",
-    version="0.1.0",
-    packages=find_packages(include=("eisoptx", "eisoptx.*")),
+    name="eadld",
+    version="0.2.0",
+    packages=find_packages(include=("eadld", "eadld.*")),
     license="MIT",
-    description="Differentiable annular optical design with LM and RayWave validation",
+    description="End-to-end automatic diffractive lens design with LM and RayWave",
     long_description=(ROOT / "README.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
     python_requires=">=3.10",

@@ -1,0 +1,34 @@
+{
+  "optimizer_comparison": {
+    "protocol": "five paired seeds, identical G+S+C residuals and 300-step budget",
+    "adam_first_order": {
+      "rms_3x3_mean_um": "5.195 +/- 0.070",
+      "rms_99_node_mean_um": "3.821 +/- 0.075",
+      "rms_48_node_mean_um": 3.301,
+      "rms_48_node_worst_um": 5.544
+    },
+    "lm_gauss_newton": {
+      "rms_3x3_mean_um": "5.563 +/- 0.096",
+      "rms_99_node_mean_um": "4.260 +/- 0.042",
+      "rms_48_node_mean_um": 3.926,
+      "rms_48_node_worst_um": 5.956
+    }
+  },
+  "codev_raywave_psf": {
+    "486.1_nm": {
+      "psf_nrmse": 0.03503518047867914,
+      "codev_strehl": 0.07693716238898893,
+      "raywave_strehl": 0.0769001606937133
+    },
+    "550.0_nm": {
+      "psf_nrmse": 0.033699520681061926,
+      "codev_strehl": 0.20752586443678092,
+      "raywave_strehl": 0.20655414717983372
+    },
+    "656.3_nm": {
+      "psf_nrmse": 0.01787638463931957,
+      "codev_strehl": 0.048310800500503556,
+      "raywave_strehl": 0.049292413914985074
+    }
+  }
+}

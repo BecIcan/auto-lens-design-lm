@@ -4,7 +4,7 @@
 # demo_singlet.py; this file only fixes the system specification.
 model:
   ray_initialization:
-    class_path: eisoptx.modeling.ray_initialization.RayInitialization
+    class_path: eadld.modeling.ray_initialization.RayInitialization
     init_args:
       aperture_type: epd
       aperture: 12.5          # f/8 at EFL 100 mm
@@ -17,7 +17,7 @@ model:
       ray_aiming_steps: 0
       wavelengths: [486.1, 550., 656.3]
   optics_simulator:
-    class_path: eisoptx.modeling.simulation.OpticsSimulator
+    class_path: eadld.modeling.simulation.OpticsSimulator
     init_args:
       shape: [65, 65]
       shape_type: psf
@@ -38,7 +38,7 @@ model:
   e2e_loss_weight:
 
 data:
-  class_path: eisoptx.data.datasets.NoneDataModule
+  class_path: eadld.data.datasets.NoneDataModule
   init_args:
     n_samples: 1
 
@@ -46,6 +46,6 @@ trainer:
   accelerator: auto
   precision: 64
   logger:
-    class_path: eisoptx.main.CustomLogger
+    class_path: eadld.main.CustomLogger
     init_args:
       save_dir: logs/multi_element

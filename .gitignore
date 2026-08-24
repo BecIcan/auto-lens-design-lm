@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments and packaging
+.env
+.venv/
+env/
+venv/
+build/
+dist/
+
+# IDE and OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Runtime outputs
+logs/
+checkpoints/
+lightning_logs/
+tensorboard/
+outputs/
+artifacts/
+tmp/
+*.tmp
+*.log
+events.out.tfevents.*
+
+# Local scientific intermediates
+*.ckpt
+*.pth
+*.pt
+*.npy
+*.npz
+*.rec
+
+# Office and publication build intermediates
+~$*.docx
+~$*.xlsx
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz

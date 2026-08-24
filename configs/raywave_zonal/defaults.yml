@@ -1,0 +1,76 @@
+model:
+  ray_initialization:
+    class_path: eisoptx.modeling.ray_initialization.RayInitialization
+    init_args:
+      aperture_type: epd
+      aperture: 50.
+      hfov: 3.
+      n_fields: 3
+      pupil_sampling_mode: skew_uniform
+      pupil_sampling_kwargs:
+        n_r: 8
+        n_theta: 16
+      ray_aiming_steps: 0
+      wavelengths: [486.1, 550., 656.3]
+  optics_simulator:
+    class_path: eisoptx.modeling.simulation.OpticsSimulator
+    init_args:
+      shape: [65, 65]
+      shape_type: psf
+      psf_abs_size: 0.25
+      psf_grid_shape: [1, 3]
+      diffraction_f_number: 2.
+      kernel_type: linear
+      sigma_rel: 1.
+      wavelength_weights:
+        - [0., 0., 1.]
+        - [0., 1., 0.]
+        - [1., 0., 0.]
+      patch_overlap: 0.25
+  e2e_vector_mode:
+  e2e_loss_weight:
+  residuals:
+    - class_path: eisoptx.optimization.residuals.TransverseRayAberrationResiduals
+      init_args:
+        weight: 1.
+
+data:
+  class_path: eisoptx.data.datasets.NoneDataModule
+  init_args:
+    n_samples: 1
+
+trainer:
+  accelerator: auto
+  max_steps: 1
+  log_every_n_steps: 1
+  precision: 64
+  logger:
+    class_path: eisoptx.main.CustomLogger
+    init_args:
+      save_dir: logs/logs_raywave_zonal
+  callbacks:
+    - eisoptx.utils.callbacks.ConfigFileCallback
+    - eisoptx.main.CustomProgressBar
+    - class_path: eisoptx.utils.visualization.VisualizationCallback
+      init_args:
+        every_n_steps: 1
+        visualizations:
+          - class_path: eisoptx.utils.visualization.LensLayout
+            init_args:
+              wavelengths: [486.1, 656.3, 550.]
+              n_fields: 3
+              n_rays: 3
+          - class_path: eisoptx.utils.visualization.SpotDiagrams
+            init_args:
+              field_indices: [0, 1, 2]
+          - class_path: eisoptx.utils.visualization.PSFs
+            init_args:
+              wavelength_indices: [0, 1, 2]
+              field_indices: [0, 1, 2]
+              sqrt_scale: True
+        save_formats: [png]
+        rc_params:
+          figure.figsize: '3.2, 2.1'
+          figure.constrained_layout.use: 'True'
+          figure.dpi: '160'
+          font.size: '7'

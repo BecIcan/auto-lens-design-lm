@@ -1,0 +1,66 @@
+# Scalar ray-wave validation overlay. Load after defaults.yml and a design file:
+# python -m eisoptx.main test -c configs/raywave_zonal/defaults.yml -c configs/raywave_zonal/designs/visible_f100_f2_m480.yml -c configs/raywave_zonal/wave.yml
+model:
+  ray_initialization:
+    init_args:
+      # First acceptance gate: design wavelength and on-axis field.
+      hfov: 0.
+      n_fields: 1
+      wavelengths: [550.]
+      pupil_sampling_mode: skew_uniform
+      pupil_sampling_kwargs:
+        # More than five radial cells across the narrowest generated annulus.
+        n_r: 96
+        # 8*pi*R*x_max/(lambda*f) = 58 for the 10 um window; see the sizing
+        # rules in the README and check_ray_wave_sampling.
+        n_theta: 64
+      ray_aiming_steps: 0
+  optics_simulator:
+    init_args:
+      # 0.154 um sampling resolves the 1.34 um first Airy zero at F/2.
+      shape: [65, 65]
+      shape_type: psf
+      psf_abs_size: 0.01
+      psf_grid_shape: [1, 1]
+      diffraction_f_number:
+      wavelengths: [550.]
+      wavelength_weights:
+        - [1.]
+        - [1.]
+        - [1.]
+      psf_mode: ray_wave
+      wave_chunk_size: 256
+
+trainer:
+  max_steps: 1
+  precision: 64
+  callbacks:
+    - eisoptx.utils.callbacks.ConfigFileCallback
+    - eisoptx.main.CustomProgressBar
+    - class_path: eisoptx.utils.visualization.VisualizationCallback
+      init_args:
+        every_n_steps: 1
+        visualizations:
+          - class_path: eisoptx.utils.visualization.LensLayout
+            init_args:
+              wavelengths: [550., 550., 550.]
+              n_fields: 1
+              n_rays: 3
+          - class_path: eisoptx.utils.visualization.ZonalSurfaceProfile
+            init_args:
+              idx: 0
+              sag_limits: [-0.22, 0.02]
+          - class_path: eisoptx.utils.visualization.SpotDiagrams
+            init_args:
+              field_indices: [0]
+          - class_path: eisoptx.utils.visualization.PSFs
+            init_args:
+              wavelength_indices: [0]
+              field_indices: [0]
+              sqrt_scale: True
+        save_formats: [png]
+        rc_params:
+          figure.figsize: '3.2, 2.1'
+          figure.constrained_layout.use: 'True'
+          figure.dpi: '160'
+          font.size: '7'

@@ -1,0 +1,31 @@
+model:
+  lens_parameterization:
+    class_path: eisoptx.optimization.parameterization.LensParameterization
+    init_args:
+      lens_sequence: s-R-
+      s:
+      - 4.30388881076
+      - 15.0021915471
+      - 92.601165543
+      c:
+      - 0.016377808146
+      - -0.00317394727393
+      nd:
+      - 1.51680004597
+      vd:
+      - 64.1699981689
+      a: []
+      d: []
+      m: []
+      z: []
+      nominal_wavelength: 550.0
+      target_efl: 100.0
+      solve_type: null
+      solve_idx: null
+      paraxial_image_solve: false
+      total_track_length_solve: null
+      qc_vars: false
+      scale_factor: 8.928571428571429
+      bezier_aspherics: false
+      glass_file: null
+      misc_surface_model: null

@@ -1,0 +1,51 @@
+# Visible achromatic singlet, small field.  One piece of glass: a flat front
+# face carrying an order-1 diffractive phase, and a Fresnel-folded annular back
+# face.  The fold order M and the diffractive power are chosen by
+# demo_singlet.py; this file only fixes the system specification.
+model:
+  ray_initialization:
+    class_path: eisoptx.modeling.ray_initialization.RayInitialization
+    init_args:
+      aperture_type: epd
+      aperture: 12.5          # f/8 at EFL 100 mm
+      hfov: 1.                # small field
+      n_fields: 3
+      pupil_sampling_mode: skew_uniform_zonal
+      pupil_sampling_kwargs:
+        n_r: 96
+        n_theta: 64
+      ray_aiming_steps: 0
+      wavelengths: [486.1, 550., 656.3]
+  optics_simulator:
+    class_path: eisoptx.modeling.simulation.OpticsSimulator
+    init_args:
+      shape: [65, 65]
+      shape_type: psf
+      psf_abs_size: 0.02
+      psf_grid_shape: [1, 3]
+      diffraction_f_number:
+      kernel_type: linear
+      sigma_rel: 1.
+      psf_mode: ray_wave
+      psf_normalization: strehl
+      wave_chunk_size: 256
+      wavelength_weights:
+        - [0., 0., 1.]
+        - [0., 1., 0.]
+        - [1., 0., 0.]
+      patch_overlap: 0.25
+  e2e_vector_mode:
+  e2e_loss_weight:
+
+data:
+  class_path: eisoptx.data.datasets.NoneDataModule
+  init_args:
+    n_samples: 1
+
+trainer:
+  accelerator: auto
+  precision: 64
+  logger:
+    class_path: eisoptx.main.CustomLogger
+    init_args:
+      save_dir: logs/multi_element

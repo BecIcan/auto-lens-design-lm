@@ -1,0 +1,40 @@
+# Promoted final prescription from the reproducible weak-near-flat M=30 run.
+# Source: logs/singlet_achromat/sdRz-/version_13/lens_parameters/00300.yml
+model:
+  lens_parameterization:
+    class_path: eisoptx.optimization.parameterization.LensParameterization
+    init_args:
+      lens_sequence: sdRz-
+      s: [2.99999993294, 98.7139713757]
+      c: [0.0119718965674, -0.00652963505305]
+      nd: [1.51633000374]
+      vd: [64.14037323]
+      dpgf: [-0.00240000011399]
+      a: []
+      d:
+        - [-0.000229858362995]
+      m: []
+      z:
+        - - [0.0, 1.6682491225e-06, 0.0, 1.81659013033]
+          - [-4.27627944957e-06, 1.26407171182e-06, 0.0318556486024, 2.56904643029]
+          - [-3.99031584064e-06, 8.30158458174e-07, 0.0636990581262, 3.14642637968]
+          - [1.18271932565e-06, 4.88579259362e-07, 0.0954976649122, 3.63318026066]
+          - [-5.04157205788e-06, 6.53994398249e-07, 0.127358078014, 4.06201928854]
+          - [-1.40500943478e-05, 8.34525731965e-07, 0.159255363886, 4.44971881807]
+          - [-2.62969836038e-05, 1.03315255848e-06, 0.191208697217, 4.80624586344]
+          - [2.34031370045e-06, 3.49850412673e-07, 0.222687684342, 5.13809286058]
+          - [-5.15687956571e-06, 4.69997716007e-07, 0.254573174586, 5.44977039099]
+          - [-1.54394526278e-05, 6.09694194434e-07, 0.286518396567, 5.74456267059]
+          - [-3.333979585e-05, 8.33946999205e-07, 0.318619683524, 6.02494813502]
+          - [1.77370227962e-06, 3.48625775714e-07, 0.349730959513, 6.25]
+      nominal_wavelength: 550.0
+      target_efl: 100.0
+      solve_type: null
+      solve_idx: null
+      paraxial_image_solve: false
+      total_track_length_solve: null
+      qc_vars: false
+      scale_factor: 6.25
+      bezier_aspherics: false
+      glass_file: configs/recommended_ohara_glass.csv
+      misc_surface_model: null

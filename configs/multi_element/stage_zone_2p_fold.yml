@@ -1,0 +1,84 @@
+model:
+  ray_initialization:
+    init_args:
+      pupil_sampling_mode: skew_uniform_zonal
+      pupil_sampling_kwargs:
+        n_r: 200
+        n_theta: 32
+  lens_parameterization:
+    init_args:
+      freeze:
+        s:
+        - false
+        - false
+        - false
+        - false
+        - true
+        c:
+        - true
+        - true
+        - false
+        - false
+        g: true
+        m: true
+        d: true
+        a:
+        - - true
+          - false
+          - false
+          - false
+          - false
+        z:
+        - - - false
+            - false
+            - true
+            - true
+  residuals:
+  - class_path: eisoptx.optimization.residuals.TransverseRayAberrationResiduals
+    init_args:
+      weight: 1.0
+  - class_path: eisoptx.optimization.residuals.GlassVariableResiduals
+    init_args:
+      weight: 0.001
+  - class_path: eisoptx.optimization.residuals.RayPathResiduals
+    init_args:
+      weight: 10.0
+      min_cutoff: 0.5
+      max_cutoff: 40.0
+      other_max_cutoffs:
+      - - -1
+        - .inf
+      min_cutoff_refractive: 1.5
+      max_cutoff_refractive: 15.0
+      min_cutoff_refractive_relative: 0.0
+      max_cutoff_refractive_relative: 100.0
+  - class_path: eisoptx.optimization.residuals.DistortionResiduals
+    init_args:
+      weight: 10.0
+      threshold: 0.01
+  - class_path: eisoptx.optimization.residuals.SurfaceNormalResiduals
+    init_args:
+      weight: 10.0
+      max_angle: 30.0
+  - class_path: eisoptx.optimization.residuals.RayAngleResiduals
+    init_args:
+      weight: 10.0
+      max_angle: 60.0
+  lens_optimizer:
+    class_path: eisoptx.optimization.optimizers.LMOptimizer
+    init_args:
+      lm_parameter: 1.0
+      damped_term_min: 1.0e-06
+      tolerance: 1.0
+      lam_increase_factor: 4.0
+      lam_decrease_factor: 2.0
+      lam_eps: 1.0e-10
+      beta: 0.95
+trainer:
+  log_every_n_steps: 1
+  check_val_every_n_epoch: null
+  callbacks:
+  - class_path: eisoptx.utils.callbacks.ConfigFileCallback
+    init_args:
+      every_n_steps: 25
+  - eisoptx.main.CustomProgressBar

@@ -1,0 +1,56 @@
+# Stage B: only A2 is free.  A2 is the sole source of a fourth-order term --
+# A1 gives curvature and Zoff gives piston -- so it is the only handle on
+# spherical aberration, and it is also the least sensitive direction: its
+# Jacobian column norm is ~3000x below A1/Zoff, so LM's per-column damping
+# starves it when everything is optimised together.
+model:
+  lens_parameterization:
+    init_args:
+      freeze:
+        s: True
+        c: True
+        g: True
+        a: True
+        m: True
+        d: True
+        z:
+          - - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+            - [True, False, True, True]
+  residuals:
+    - class_path: eisoptx.optimization.residuals.TransverseRayAberrationResiduals
+      init_args:
+        weight: 1.

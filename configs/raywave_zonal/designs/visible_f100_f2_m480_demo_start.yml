@@ -1,0 +1,54 @@
+# Demonstration starting point derived from visible_f100_f2_m480.yml.
+# REGRESSION FIXTURE ONLY: the material is a three-line ZNS_broad proxy, not a
+# traced EISOPTX catalog material or publication benchmark.
+# The MATLAB-generated topology, materials, spacings, diffraction order, and
+# zone boundaries are unchanged. The image distance is increased by 0.2 mm
+# and consecutive A2 values are alternately perturbed by +2% and -2% so the
+# fixed-topology LM recovery is visible and exactly reproducible.
+# Physical units: mm, mm^-1, mm^-3, and nm as applicable.
+model:
+  lens_parameterization:
+    class_path: eisoptx.optimization.parameterization.LensParameterization
+    init_args:
+      lens_sequence: sRz-
+      a: []
+      c: [0, -0.0072152503217546805]
+      d: []
+      dpgf: [0.057410275579126924]
+      m: []
+      nd: [2.3673481464753423]
+      s: [9.999999915065926, 100.20000008493408]
+      vd: [15.293640993408856]
+      z:
+        -
+          - [0, 2.2278846124582265e-07, 0, 7.2713541666666668]
+          - [-6.4377620581238318e-06, 2.1101739656755694e-07, 0.19047244023210258, 10.290104166666666]
+          - [-1.2477812442463453e-05, 2.1667662135015884e-07, 0.38091061781105851, 12.6109375]
+          - [-1.8126420655816423e-05, 2.0539926945693576e-07, 0.57129276741241386, 14.571354166666666]
+          - [-2.3394946346418696e-05, 2.1094250922094484e-07, 0.76159807275797564, 16.302083333333332]
+          - [-2.82949060916712e-05, 1.9999077387295317e-07, 0.95180665027128541, 17.869270833333331]
+          - [-3.2836755507507746e-05, 2.0541390673922891e-07, 1.1418993789037741, 19.314062499999999]
+          - [-3.7030873881263755e-05, 1.9477206032317668e-07, 1.3318579491578049, 20.660937499999999]
+          - [-4.0888023963360585e-05, 2.000773094584144e-07, 1.5216649888608338, 21.928645833333334]
+          - [-4.4417955825499632e-05, 1.8973441519433402e-07, 1.7113037500332662, 23.129687499999999]
+          - [-4.7630302526708874e-05, 1.949249838476634e-07, 1.9007582512680903, 24.274479166666666]
+          - [-5.1237352394415282e-05, 1.854368099735557e-07, 2.0902265482901834, 25]
+      nominal_wavelength: 550
+      freeze:
+        s: True
+        c: True
+        g: True
+        a: True
+        z: True
+        d: True
+        m: True
+      target_efl: 100
+      solve_type:
+      solve_idx:
+      paraxial_image_solve: False
+      total_track_length_solve:
+      qc_vars: False
+      scale_factor: 25
+      bezier_aspherics: False
+      glass_file:
+      misc_surface_model:

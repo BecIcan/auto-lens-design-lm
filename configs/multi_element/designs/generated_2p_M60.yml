@@ -1,0 +1,64 @@
+model:
+  lens_parameterization:
+    class_path: eisoptx.optimization.parameterization.LensParameterization
+    init_args:
+      lens_sequence: s-aRz-aRa-
+      s:
+      - 0.499999364411
+      - 14.9773705774
+      - 39.8731523716
+      - 15.0003787507
+      - 84.608301517
+      c:
+      - 0.0
+      - -0.00828316092491
+      - 0.00624665793129
+      - -0.00619734987896
+      nd:
+      - 1.58287718956
+      - 1.53499185107
+      vd:
+      - 34.3411409063
+      - 57.8200493762
+      a:
+      - - 0.0
+        - 2.03899795117e-08
+        - 4.559099451e-08
+        - 6.96591476015e-10
+        - -9.85978924171e-12
+      - - 0.0
+        - 8.25862295574e-08
+        - 4.25342969762e-08
+        - 1.37491674396e-10
+        - -4.33649608723e-12
+      - - 0.0
+        - -9.7692715933e-07
+        - -3.61704169152e-08
+        - 5.4121978267e-10
+        - 1.41341222271e-11
+      d: []
+      m: []
+      z:
+      - - - 0.000885445386697
+          - 2.5241670261e-06
+          - 0.0
+          - 3.63318026066
+        - - 0.000805848550044
+          - 5.40346029474e-06
+          - 0.0546688621398
+          - 5.13809286058
+        - - 0.000704470197285
+          - 7.3763741137e-06
+          - 0.10933772428
+          - 6.25
+      nominal_wavelength: 550.0
+      target_efl: 100.0
+      solve_type: focal_length
+      solve_idx: 3
+      paraxial_image_solve: true
+      total_track_length_solve: null
+      qc_vars: false
+      scale_factor: 6.25
+      bezier_aspherics: false
+      glass_file: configs/moldable_materials.csv
+      misc_surface_model: null

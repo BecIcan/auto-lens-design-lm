@@ -1,0 +1,21 @@
+name: lm-annular
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - pytorch=2.9.1
+  - pytorch-cuda=12.6
+  - torchvision=0.24.1
+  - torchmetrics=1.9.0
+  - scipy=1.15.3
+  - pandas=2.3.3
+  - matplotlib=3.10.8
+  - tensorboard=2.21.0
+  - numpy=2.2.6
+  - pyyaml=6.0.3
+  - pytest
+  - pip
+  - pip:
+    - lightning==2.6.5
+    - jsonargparse[signatures]==4.50.0

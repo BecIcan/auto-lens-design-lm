@@ -1,0 +1,35 @@
+# add by cjy: review views for the c_mount specification.
+model:
+  ray_initialization:
+    init_args:
+      pupil_sampling_mode: skew_uniform_zonal
+      pupil_sampling_kwargs:
+        n_r: 96
+        n_theta: 32
+data:
+  init_args:
+    n_samples: 1
+trainer:
+  callbacks:
+    - class_path: eisoptx.utils.visualization.VisualizationCallback
+      init_args:
+        every_n_steps: 1
+        visualizations:
+          - class_path: eisoptx.utils.visualization.LensLayout
+            init_args:
+              wavelengths: [486.1, 587.6, 656.3]
+              n_fields: 5
+              n_rays: 15
+          - class_path: eisoptx.utils.visualization.SpotDiagrams
+            init_args:
+              field_indices: [0, 1, 2, 3, 4]
+          - class_path: eisoptx.utils.visualization.ZonalSurfaceProfile
+            init_args:
+              samples_per_zone: 32
+        save_formats: [png]
+        rc_params:
+          figure.figsize: '9.0, 3.2'
+          figure.constrained_layout.use: 'True'
+          figure.dpi: '200'
+          font.size: '7'
+          lines.linewidth: '0.35'

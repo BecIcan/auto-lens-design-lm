@@ -1,0 +1,36 @@
+# f/5.6 physical-branch experiment. Load after fit.yml.
+model:
+  ray_initialization:
+    init_args:
+      aperture: 17.857142857142858
+      hfov: 1.
+      pupil_sampling_mode: skew_uniform_zonal
+      pupil_sampling_kwargs:
+        n_r: 100
+        n_theta: 32
+  residuals:
+    - class_path: eisoptx.optimization.residuals.TransverseRayAberrationResiduals
+      init_args:
+        weight: 1.
+    - class_path: eisoptx.optimization.residuals.FocalLengthResiduals
+      init_args:
+        weight: 1.e6
+    - class_path: eisoptx.optimization.residuals.DistortionResiduals
+      init_args:
+        weight: 10.
+        threshold: 0.02
+    - class_path: eisoptx.optimization.residuals.HDOEPhaseResiduals
+      init_args:
+        weight: 1.e6
+        diffraction_order: 29
+        design_wavelength: 550.
+        zonal_surface_index: 0
+        field_indices: [0]
+    - class_path: eisoptx.optimization.residuals.HDOEBranchConstraintResiduals
+      init_args:
+        weight: 1.
+        diffraction_order: 29
+        design_wavelength: 550.
+        n_zones: 25
+        zonal_surface_index: 0
+        field_indices: [0]

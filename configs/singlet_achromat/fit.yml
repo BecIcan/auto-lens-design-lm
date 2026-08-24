@@ -1,0 +1,97 @@
+# LM stage for the generated singlet.  Load last:
+#   python -m eisoptx.main fit -c configs/singlet_achromat/defaults.yml \
+#       -c configs/singlet_achromat/designs/generated.yml \
+#       -c configs/singlet_achromat/fit.yml
+# Free: image distance, weak starting curvatures, and all non-gauge zonal shape
+# variables.  Frozen: element thickness, catalog glass, all Rmax (topology), and
+# the first-zone dA1/dZ gauge enforced by LensParameterization.
+model:
+  lens_parameterization:
+    init_args:
+      freeze:
+        # Flat-plate start: the base curvature and every zone shape freedom are
+        # open.  LensParameterization always freezes Rmax (topology, set by M)
+        # and the first-zone dA1/dZ gauge, which the base curvature and a global
+        # piston absorb, so the central zone still gains power through c.
+        s: [True, False]
+        c: False
+        g: True
+        a: True
+        m: True
+        # The front DOE supplies the independent chromatic-power channel that
+        # made the earlier f/8 solution possible; it starts at zero.
+        d: False
+        # M supplies only the fixed boundaries. LM must create delta_A1, A2 and
+        # delta_Z from zero; Rmax and the first-zone gauges stay frozen.
+        z:
+          - - [False, False, False, True]
+  residuals:
+    - class_path: eisoptx.optimization.residuals.TransverseRayAberrationResiduals
+      init_args:
+        weight: 1.
+    - class_path: eisoptx.optimization.residuals.FocalLengthResiduals
+      init_args:
+        # Power is in 1/mm; sqrt(1e6)=1000 balances it against mm spot errors.
+        weight: 1.e6
+    - class_path: eisoptx.optimization.residuals.DistortionResiduals
+      init_args:
+        weight: 10.
+        threshold: 0.02
+    - class_path: eisoptx.optimization.residuals.HDOEPhaseResiduals
+      init_args:
+        weight: 1.e6
+        diffraction_order: 30
+        design_wavelength: 550.
+        zonal_surface_index: 0
+        field_indices: [0]
+  lens_optimizer:
+    class_path: eisoptx.optimization.optimizers.LMOptimizer
+    init_args:
+      lm_parameter: 1.
+      damped_term_min: 1.e-6
+      tolerance: 1.
+      lam_increase_factor: 4.
+      lam_decrease_factor: 2.
+      lam_eps: 1.e-10
+      beta: .95
+
+data:
+  init_args:
+    n_samples: 300
+
+trainer:
+  max_steps: 300
+  log_every_n_steps: 1
+  check_val_every_n_epoch:
+  callbacks:
+    - class_path: eisoptx.utils.callbacks.ConfigFileCallback
+      init_args:
+        every_n_steps: 10
+    - eisoptx.main.CustomProgressBar
+    - class_path: eisoptx.utils.visualization.VisualizationCallback
+      init_args:
+        every_n_steps: 5          # optical layout recorded every 5 LM steps
+        visualizations:
+          - class_path: eisoptx.utils.visualization.LensLayout
+            init_args:
+              wavelengths: [486.1, 656.3, 550.]
+              n_fields: 3
+              n_rays: 5
+          - class_path: eisoptx.utils.visualization.ZonalSurfaceProfile
+            init_args:
+              idx: 0
+              show_change: True
+          - class_path: eisoptx.utils.visualization.SpotDiagrams
+            init_args:
+              field_indices: [0, 1, 2]
+          - class_path: eisoptx.utils.visualization.PSFs
+            init_args:
+              wavelength_indices: [0, 1, 2]
+              field_indices: [0, 1, 2]
+              sqrt_scale: True
+        save_formats: [png]
+        rc_params:
+          figure.figsize: '3.2, 2.1'
+          figure.constrained_layout.use: 'True'
+          figure.dpi: '160'
+          font.size: '7'

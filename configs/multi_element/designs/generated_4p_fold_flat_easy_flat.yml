@@ -1,0 +1,89 @@
+model:
+  lens_parameterization:
+    class_path: eisoptx.optimization.parameterization.LensParameterization
+    init_args:
+      lens_sequence: s-aRa-aRa-aRa-aRa-
+      s:
+      - 0.25
+      - 2.0
+      - 2.0
+      - 2.0
+      - 2.0
+      - 2.0
+      - 2.0
+      - 2.0
+      - 28.0
+      c:
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      nd:
+      - 1.75
+      - 1.75
+      - 1.75
+      - 1.75
+      vd:
+      - 45.0
+      - 45.0
+      - 45.0
+      - 45.0
+      a:
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      - - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+      d: []
+      m: []
+      z: []
+      nominal_wavelength: 587.6
+      target_efl: 28.0
+      solve_type: null
+      solve_idx: null
+      paraxial_image_solve: false
+      total_track_length_solve: null
+      qc_vars: false
+      scale_factor: 1.75
+      bezier_aspherics: false
+      glass_file: configs/recommended_ohara_glass.csv
+      misc_surface_model: null

@@ -78,6 +78,8 @@ CODE V FFT PSF 与 EADLD RayWave 使用相同处方、孔径、采样和像面�
 
 ![Cooke 三片镜头自动优化](docs/assets/multi_element_optimization.gif)
 
+![优化后三视场点列图](docs/assets/multi_element_spot_diagram.png)
+
 ```powershell
 python examples/run_multi_element.py
 ```

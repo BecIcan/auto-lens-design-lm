@@ -78,6 +78,8 @@ The public example optimizes the annular front surface of the second element in 
 
 ![Cooke triplet automatic optimization](docs/assets/multi_element_optimization.gif)
 
+![Optimized three-field spot diagram](docs/assets/multi_element_spot_diagram.png)
+
 ```powershell
 python examples/run_multi_element.py
 ```

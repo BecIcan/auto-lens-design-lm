@@ -1,6 +1,180 @@
 # EADLD
 
-**End-to-End Auto Diffractive Lens Design｜端到端自动衍射镜头设计**
+**End-to-End Auto Diffractive Lens Design**
+
+<a id="english"></a>
+<p align="right"><strong>English</strong> · <a href="#中文">中文</a></p>
+
+<details open>
+<summary><strong>English</strong> (default)</summary>
+
+EADLD unifies differentiable geometric ray tracing, annular diffractive topology, constrained Levenberg–Marquardt (LM) optimization, and RayWave scalar-wave validation in one design pipeline. The Python package and import name are both `eadld`.
+
+## Native Desktop Design Console
+
+EADLD provides a native Windows desktop interface with no browser dependency. The system-specification panel can load the established singlet, triplet, and four-element cases and configure focal length, F-number, field of view, distortion constraints, and sampling. Wavelengths are entered in Zemax-style rows with independent weights and a primary-wavelength selector. The entrance-pupil diameter is updated from focal length and F-number.
+
+![EADLD native desktop optimization interface](docs/assets/eadld_desktop.png)
+
+The screenshot shows a 20-step live pipeline check from the initial four-element prescription. It demonstrates interface updates and loss reduction; archived final RMS values are taken from the independent audit table below.
+
+```powershell
+python -m eadld.desktop
+```
+
+The default is the triplet Cooke annular case. Use the demo option for the four-element F/2 C-mount wide-angle case:
+
+```powershell
+python -m eadld.desktop --demo
+```
+
+The desktop console covers the three formal topology cases from the paper supplements. The triplet is replayed for 200 steps from the pre-refined state, retaining the paper-selected step-100 prescription. The four-element case starts from the discretely remeshed 19-zone final-topology seed and replays 750 continuous-profile steps. The ray layout updates after every LM step; the more expensive spot diagrams and RayWave MTF update every 50 steps and at the final step.
+
+Every final prescription is also evaluated by an independent audit that does not call the optimization merit function: 11 equally spaced fields, nine equally weighted wavelengths from 450–650 nm, and deterministic 96×32 pupil sampling. The table reports spectrally and spatially weighted geometric RMS spot radius; three-line results, nine-wavelength results, and RayWave metrics are not mixed.
+
+| Paper case | System specification | Selected zone count | 11×9 mean RMS / µm | 11×9 worst RMS / µm | Minimum throughput |
+|---|---|---|---:|---:|---:|
+| [Singlet](configs/demo_cases/designs/singlet_final.yml) | EFL 100 mm · F/8 · ±1° | Rear surface, M=30, **12 zones** | 5.981 | 15.616 | 0.99580 |
+| [Cooke triplet](configs/paper_demos/designs/triplet_postrefine_100.yml) | EFL 100 mm · F/2.8 · ±5° | Front surface of element 2, M=90, **41 zones** | 7.951 | 19.049 | 1.00000 |
+| [Four-element C-mount](configs/demo_cases/designs/four_element_final.yml) | EFL 28 mm · F/2 · ±15.88° | Front surface of element 4, M=30, **19 zones** | 3.390 | 8.834 | 0.98655 |
+
+“Selected zone count” means the discrete result selected under each case's own aperture, diffraction order, minimum-zone-width, and fixed-topology search constraints. It is not a universal optimum across system specifications.
+
+For parameter-level replay of the older singlet and four-element histories, optimization retains their original uniform-ray merit. The newer triplet record uses physical pupil-area quadrature. Final acceptance for all three cases uses the independent area-weighted audit above, so replay compatibility does not change the reporting basis.
+
+The current EADLD replay results are listed below. For the triplet, the maximum parameter difference from the paper prescription at step 100 is approximately `1e-15`, and the maximum change from steps 100–200 is only `6.2e-11 mm`. The singlet and four-element trajectories are no longer parameter-identical because core residual and numerical implementations were corrected after the paper archive. Release selection always follows the independent worst-field metric rather than automatically using the latest run.
+
+| Case | Current replay | Current 11×9 mean/worst RMS / µm | Agreement with paper trajectory | Release selection |
+|---|---:|---:|---|---|
+| Singlet | 200 steps | 15.119 / 40.987 | Numerical divergence | Retain paper archive: 5.981 / 15.616 |
+| Triplet | 200 steps | 7.951 / 19.049 (step-100 prescription) | Parameter-level reproduction; plateau after step 100 | Use paper step 100 |
+| Four-element | 750 steps | 3.310 / 9.233 | Same problem and 19-zone topology; numerical divergence after binding | Retain paper archive with better worst field: 3.390 / 8.834 |
+
+The audit command evaluates every reference and final state and writes the complete 99-node matrices to `outputs/paper_demos/audit.json`:
+
+```powershell
+python examples/audit_paper_demos.py
+```
+
+These archived cases were optimized for geometric aberration. Current three-wavelength RayWave checks do not support claiming diffraction-limited performance across every field and wavelength. MTF and Strehl in the interface are independent wave-optics checks; meeting a geometric RMS target does not replace them. The program warns when angular sampling is insufficient, and the high-frequency MTF range is also limited by the PSF-grid Nyquist frequency.
+
+Optimization runs in a separate process so the interface remains responsive while showing:
+
+- loss and its convergence history;
+- the live ray layout;
+- three-field spot diagrams, each overlaying three wavelengths with distinct colors and markers and reporting spectral-weighted RMS radius and Airy radius;
+- three-field RayWave MTF, with sagittal solid lines, tangential dashed lines, and a diffraction-limit dotted line for each wavelength and its own cutoff frequency.
+
+Run configurations and results are stored in `outputs/desktop/runs/`, which is excluded from version control.
+
+## Core Capabilities
+
+- Generate a fixed annular topology from spherical, aspheric, or near-zero-power seeds.
+- Jointly optimize curvature, thickness, glass, and continuous annular parameters.
+- Preserve the specified integer diffraction branch with full optical-path-difference constraints.
+- Compute PSF, Strehl, and MTF by RayWave-compatible direct Kirchhoff summation.
+- Support singlet and multi-element diffractive systems while keeping the core PyTorch computation differentiable.
+
+## Theory
+
+Zone i uses a four-parameter local sag profile:
+
+$$
+zᵢ(r) = (c/2 + ΔA₁,ᵢ)r² + A₂,ᵢr⁴ + ΔZᵢ,  r ∈ (Rᵢ₋₁, Rᵢ].
+$$
+
+At the design wavelength λ₀, adjacent zones satisfy the full-system optical-path branch:
+
+$$
+L̄ᵢ₊₁ − L̄ᵢ = Mλ₀.
+$$
+
+RayWave directly accumulates complex amplitudes from pupil samples:
+
+$$
+U(P) = Σⱼ wⱼKⱼ(P) exp(i k Lⱼ(P)),  PSF(P) = |U(P)|².
+$$
+
+Constrained LM first finds a particular solution satisfying AΔxₚ = −c, then solves in the null space N:
+
+$$
+minᵧ ‖r + J(Δxₚ + Ny)‖₂² + λ‖D(Δxₚ + Ny)‖₂².
+$$
+
+## First- vs Second-Order Optimization
+
+The comparison below uses the same five near-zero-power seeds, G+S+C residuals, annular topology, and 300-step budget. Values are geometric RMS radius; “±” is the sample standard deviation across seeds. Adam reaches the lower final RMS in this experiment, so the table illustrates methodological differences rather than claiming that LM always produces a better endpoint.
+
+| Method | Information order | 3×3 mean RMS / µm | 99-node mean RMS / µm | 48-node mean RMS / µm | 48-node worst RMS / µm |
+|---|---|---:|---:|---:|---:|
+| Adam | First-order gradient | 5.195 ± 0.070 | 3.821 ± 0.075 | 3.301 | 5.544 |
+| LM | Gauss–Newton second-order approximation | 5.563 ± 0.096 | 4.260 ± 0.042 | 3.926 | 5.956 |
+
+LM's main advantage is incorporating curvature information and hard branch constraints in the same feasible step. Adam is lighter, but does not directly use JᵀJ or the constraint null space.
+
+## CODE V–RayWave PSF Accuracy
+
+With the same annular prescription, aperture, sampling, and image-plane grid frozen, the normalized PSF NRMSE between CODE V FFT PSF and EADLD RayWave is 3.50%, 3.37%, and 1.79%.
+
+![CODE V and RayWave PSF accuracy validation](docs/assets/codev_raywave_psf.png)
+
+| Wavelength / nm | PSF NRMSE | CODE V Strehl | RayWave Strehl | Absolute Strehl difference |
+|---:|---:|---:|---:|---:|
+| 486.1 | 0.0350 | 0.07694 | 0.07690 | −0.00004 |
+| 550.0 | 0.0337 | 0.20753 | 0.20655 | −0.00097 |
+| 656.3 | 0.0179 | 0.04831 | 0.04929 | +0.00098 |
+
+This validates scalar propagation consistency. It does not include polarization, step-sidewall scattering, Fresnel loss, or absolute diffraction efficiency.
+
+## Multi-Element Automatic Optimization
+
+The animation shows continuous optimization from the Cooke triplet baseline to an annular design on the front surface of its second element. This is the repository's single public multi-element example. The public script starts constrained LM from the recorded initial annular prescription.
+
+![Automatic optimization of a triplet annular lens](docs/assets/multi_element_optimization.gif)
+
+```powershell
+python examples/run_multi_element.py
+```
+
+## Installation and Validation
+
+```powershell
+conda env create -f environment.yml; conda activate eadld; pip install -e ".[dev]"
+```
+
+```powershell
+python -m pytest -q
+```
+
+Compact RayWave check:
+
+```powershell
+python -m eadld.main test -c configs/raywave_zonal/defaults.yml -c configs/raywave_zonal/designs/visible_f100_f2_m480.yml -c configs/raywave_zonal/wave.yml
+```
+
+## Repository Layout
+
+```text
+eadld/        Core optics, wave propagation, and optimization
+configs/      Three minimal reproducible configuration chains
+examples/     Concise user-facing entry points
+tests/        Theory, gradient, constraint, and RayWave regression tests
+docs/         Figures and validation metrics
+```
+
+## Origin and License
+
+EADLD is derived from the MIT-licensed [EISOPTX / Generalized Aberrations](https://light.princeton.edu/generalized-aberrations). The original license is retained in [LICENSE](LICENSE), and derivative-work attribution is provided in [NOTICE](NOTICE). Publications should cite the upstream work and explicitly identify EADLD's annular topology, full optical-path branch constraints, LM optimization, and RayWave scalar propagation.
+
+</details>
+
+<a id="中文"></a>
+<details>
+<summary><strong>中文</strong></summary>
+
+<p align="right"><a href="#english">English</a> · <strong>中文</strong></p>
+
+**端到端自动衍射镜头设计**
 
 EADLD 将可微几何光线追迹、环带衍射拓扑、受约束 Levenberg–Marquardt（LM）优化和 RayWave 标量波动验证放在同一条设计链中。Python 包名与导入名统一为 `eadld`。
 
@@ -159,3 +333,5 @@ docs/         展示图与验证指标
 ## 来源与许可
 
 EADLD 基于 MIT 许可的 [EISOPTX / Generalized Aberrations](https://light.princeton.edu/generalized-aberrations) 开发。原许可证保留在 [LICENSE](LICENSE)，衍生工作说明见 [NOTICE](NOTICE)。论文使用时应同时引用上游工作，并明确说明 EADLD 的环带拓扑、完整光程分支约束、LM 优化和 RayWave 标量传播。
+
+</details>

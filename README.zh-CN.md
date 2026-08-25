@@ -6,31 +6,7 @@
 
 EADLD 集成可微光线追迹、环带衍射拓扑、受约束 Levenberg–Marquardt 优化和 RayWave 标量波动分析。
 
-## 桌面设计台
-
-Windows 原生界面只保留核心设计视图：
-
-- 系统规格与 Zemax 风格波长权重；
-- 损失函数与收敛曲线；
-- 每个 LM 步更新的光路图；
-- 三视场、三波长点列图与加权 RMS 半径；
-- 弧矢、子午 RayWave MTF 与衍射极限参考线。
-
-![EADLD 桌面优化界面](docs/assets/eadld_desktop.png)
-
-```powershell
-python -m eadld.desktop
-```
-
-默认打开 Cooke 三片案例。四片 F/2 C-mount 案例：
-
-```powershell
-python -m eadld.desktop --demo
-```
-
-运行数据保存在 `outputs/desktop/runs/`。
-
-## 论文案例
+## 演示案例
 
 项目包含单片、Cooke 三片和四片 C-mount 案例。最终指标采用独立的 11 视场 × 9 波长审计和 96×32 确定性瞳面采样。
 

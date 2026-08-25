@@ -6,31 +6,7 @@
 
 EADLD combines differentiable ray tracing, annular diffractive topology, constrained Levenberg–Marquardt optimization, and RayWave scalar-wave analysis.
 
-## Desktop Design Console
-
-The native Windows interface contains only the essential design views:
-
-- system specifications and Zemax-style wavelength weights;
-- loss and convergence history;
-- a ray layout updated after every LM step;
-- three-field, three-wavelength spot diagrams with weighted RMS radius;
-- sagittal and tangential RayWave MTF with diffraction-limit references.
-
-![EADLD desktop optimization interface](docs/assets/eadld_desktop.png)
-
-```powershell
-python -m eadld.desktop
-```
-
-The default case is the Cooke triplet. Open the four-element F/2 C-mount case with:
-
-```powershell
-python -m eadld.desktop --demo
-```
-
-Run data is saved to `outputs/desktop/runs/`.
-
-## Paper Demos
+## Demos
 
 The singlet, Cooke triplet, and four-element C-mount cases are included. Final values use an independent 11-field × 9-wavelength audit with deterministic 96×32 pupil sampling.
 

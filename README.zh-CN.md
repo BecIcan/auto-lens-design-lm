@@ -20,11 +20,10 @@ EADLD 集成可微光线追迹、环带衍射拓扑、受约束 Levenberg–Marq
 python examples/audit_paper_demos.py
 ```
 
-完整 99 节点审计保存在 `outputs/paper_demos/audit.json`。
-
 ## 初始结构生成
 
-设计指标 → 私有生成器 → EADLD 真实光线追迹。生成后不调用优化器，生成器和权重不公开。
+初始结构由带结构先验的轻量条件网络生成，随后直接进入 EADLD 真实光线追迹；生成后不再优化。
+网络细节和权重不公开。
 
 74 mm · F/2.8 · ±6.17° · 435–656 nm · 9 片
 
@@ -37,6 +36,8 @@ python examples/audit_paper_demos.py
 ```powershell
 python examples/generate_initial_structure.py --efl 74 --f-number 2.8 --half-field 6.17 --wavelengths 435 545.5 656 --elements 9 --candidate-count 3 --min-image-clearance 6.3 --max-package-length 55.5 --max-distortion 0.01 --target-cra 12 --backend private_seed.runtime:create_backend --backend-config D:\private\seed.toml --output-dir outputs\seed_demo
 ```
+
+命令行脚本已公开，私有后端需单独提供。
 
 ## 光学模型
 

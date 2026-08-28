@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "title": "Private generator / public physics proof-of-concept",
+  "metric": "Mean polychromatic RMS spot radius from EADLD native real-ray tracing [um]",
+  "runtime_contract": {
+    "post_generation_optimizer": false,
+    "paraxial_solve": false,
+    "catalog_glass_snapping": false,
+    "candidate_count": 3,
+    "field_samples": 5,
+    "fixed_target_epd": true
+  },
+  "disclosure": "Architecture, training data, prescriptions, pair identities, and checkpoints are private.",
+  "qualification": "Small internal teacher set; proof-of-concept data, not a held-out generalization or finished-lens claim.",
+  "cases": [
+    {"label": "VIS · 8 elements", "band": "435-656 nm", "elements": 8, "source_um": 39.558, "generated_um": 12.545, "reference_um": 11.282, "worst_generated_um": 17.909, "efl_mm": 74.940, "valid_ray_percent": 97.47, "mechanical_gate": true},
+    {"label": "VIS · 9 elements", "band": "435-656 nm", "elements": 9, "source_um": 15.604, "generated_um": 9.959, "reference_um": 8.521, "worst_generated_um": 12.082, "efl_mm": 74.171, "valid_ray_percent": 100.00, "mechanical_gate": true},
+    {"label": "VIS · 10 elements", "band": "435-656 nm", "elements": 10, "source_um": 12.789, "generated_um": 12.526, "reference_um": 10.329, "worst_generated_um": 12.837, "efl_mm": 73.996, "valid_ray_percent": 99.63, "mechanical_gate": true},
+    {"label": "VIS-NIR · 8 elements", "band": "435-850 nm", "elements": 8, "source_um": 23.460, "generated_um": 67.414, "reference_um": 27.447, "worst_generated_um": 77.154, "efl_mm": 74.617, "valid_ray_percent": 95.53, "mechanical_gate": true},
+    {"label": "VIS-NIR · 9 elements", "band": "435-850 nm", "elements": 9, "source_um": 22.663, "generated_um": 23.297, "reference_um": 15.525, "worst_generated_um": 27.026, "efl_mm": 74.353, "valid_ray_percent": 100.00, "mechanical_gate": true},
+    {"label": "VIS-NIR · 10 elements", "band": "435-850 nm", "elements": 10, "source_um": 22.095, "generated_um": 19.411, "reference_um": 16.856, "worst_generated_um": 20.362, "efl_mm": 73.505, "valid_ray_percent": 99.77, "mechanical_gate": true}
+  ]
+}

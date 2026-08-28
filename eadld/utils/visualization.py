@@ -1919,6 +1919,60 @@ def generate_layout_plot(
     return fig
 
 
+def generate_spot_plot(
+    xy: torch.Tensor,
+    ray_valid: torch.Tensor,
+    wavelengths: list[float] | tuple[float, ...],
+    hfov: float,
+    fig: mpl.figure.Figure = None,
+):
+    """Plot image-plane intercepts produced by :meth:`Lens.trace_rays`.
+
+    This lightweight entry point uses the same centering convention and units as
+    ``SpotDiagrams`` without requiring a Lightning trainer or imaging module.
+    """
+    n_fields = xy.shape[1]
+    fields = np.linspace(0, hfov, n_fields)
+    colors = wavelengths2color(np.asarray(wavelengths))
+    if fig is None:
+        fig = mpl.figure.Figure(figsize=(4.2 * n_fields, 4.0))
+    axes = fig.subplots(1, n_fields, squeeze=False)[0]
+    for field, ax in enumerate(axes):
+        all_points = []
+        for wave, (wavelength, color) in enumerate(zip(wavelengths, colors)):
+            mask = ray_valid[field, :, wave]
+            points = xy[:, field, mask, wave]
+            if points.numel() == 0:
+                continue
+            all_points.append(points)
+            center = points.mean(dim=1, keepdim=True)
+            centered = (points - center).detach().cpu() * 1e3
+            ax.scatter(
+                centered[0],
+                centered[1],
+                s=4,
+                color=color,
+                alpha=0.72,
+                label=f"{wavelength:g} nm",
+            )
+        if all_points:
+            points = torch.cat(all_points, dim=1)
+            center = points.mean(dim=1, keepdim=True)
+            rms = float((points - center).square().sum(0).mean().sqrt()) * 1e3
+            ax.set_title(f"{fields[field]:.2f}°  RMS {rms:.2f} μm")
+        else:
+            ax.set_title(f"{fields[field]:.2f}°  no valid rays")
+        ax.axhline(0, color="0.75", lw=0.5)
+        ax.axvline(0, color="0.75", lw=0.5)
+        ax.set_aspect("equal", adjustable="datalim")
+        ax.set_xlabel("x [μm]")
+    axes[0].set_ylabel("y [μm]")
+    axes[0].legend(frameon=False, fontsize=7)
+    fig.suptitle("EADLD native real-ray spot diagrams")
+    fig.tight_layout()
+    return fig
+
+
 def plot_layout(
     ax: mpl.axes.Axes,
     lens: optics.Lens,

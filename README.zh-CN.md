@@ -22,6 +22,43 @@ python examples/audit_paper_demos.py
 
 完整 99 节点审计保存在 `outputs/paper_demos/audit.json`。
 
+## 私有生成器，公开物理验证
+
+EADLD 将初始结构生成能力与可复现的物理验证分离。私有后端接收焦距、F/#、视场、
+波段、片数和候选数，通过公开的
+[`InitialStructureBackend`](eadld/initialization/api.py) 接口返回完整镜头种子；EADLD
+负责固定目标 EPD 的机械门、原生真实光线追迹、候选排序，以及带哈希的光路图和点列图。
+
+推理链路严格保持**一次生成**：生成后不调用优化器、不做近轴焦距/像面求解，也不吸附
+目录玻璃。网络架构、训练集、教师配对、逐面处方和权重不在本仓库发布。
+
+![私有初始结构生成器基准](docs/assets/initial_structure_benchmark.png)
+
+| 波段 | 片数 | 检索原型 / µm | 一次生成 / µm | 私有参考 / µm | 有效光线 |
+|---|---:|---:|---:|---:|---:|
+| 435–656 nm | 8 | 39.56 | **12.55** | 11.28 | 97.47% |
+| 435–656 nm | 9 | 15.60 | **9.96** | 8.52 | 100.00% |
+| 435–656 nm | 10 | 12.79 | **12.53** | 10.33 | 99.63% |
+| 435–850 nm | 8 | 23.46 | 67.41 | 27.45 | 95.53% |
+| 435–850 nm | 9 | 22.66 | 23.30 | 15.53 | 100.00% |
+| 435–850 nm | 10 | 22.10 | **19.41** | 16.86 | 99.77% |
+
+以上是小规模内部教师集上的五视场 EADLD 真实追迹初始结构指标，不代表独立测试集泛化、
+成品镜头或外部软件等价性。宽波段 8 片的退化结果被保留，用于明确当前短板。汇总数据见
+[`docs/initial_structure_benchmark.json`](docs/initial_structure_benchmark.json)。
+
+代表性的可见光 9 片结果：
+
+![网络生成初始结构](docs/assets/initial_structure_layout.png)
+
+![网络生成初始结构点列图](docs/assets/initial_structure_spots.png)
+
+私有后端调用方式：
+
+```powershell
+python examples/generate_initial_structure.py --efl 74 --f-number 2.8 --half-field 6.17 --wavelengths 435 545.5 656 --elements 9 --candidate-count 3 --min-image-clearance 6.3 --max-package-length 55.5 --max-distortion 0.01 --target-cra 12 --backend private_seed.runtime:create_backend --backend-config D:\private\seed.toml --output-dir outputs\seed_demo
+```
+
 ## 光学模型
 
 每个环带采用局部面型：

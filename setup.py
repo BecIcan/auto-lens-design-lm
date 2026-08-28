@@ -28,6 +28,15 @@ setup(
         "torchmetrics",
         "torchvision",
     ],
-    extras_require={"dev": ["pytest"]},
-    entry_points={"console_scripts": ["eadld-desktop=eadld.desktop.app:main"]},
+    extras_require={
+        "dev": ["pytest", "httpx>=0.27"],
+        "web": ["fastapi>=0.115", "uvicorn>=0.30"],
+    },
+    package_data={"eadld.web": ["static/*"]},
+    entry_points={
+        "console_scripts": [
+            "eadld-desktop=eadld.desktop.app:main",
+            "eadld-web=eadld.web.app:main",
+        ]
+    },
 )

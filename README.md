@@ -22,44 +22,18 @@ python examples/audit_paper_demos.py
 
 The full 99-node audit is written to `outputs/paper_demos/audit.json`.
 
-## Private Spec-to-Seed, Public Physics
+## Initial Structure Generation
 
-EADLD now separates proprietary initial-structure intelligence from reproducible
-physics verification. A private backend receives focal length, F-number, field,
-spectrum, element count, and candidate count. It returns complete lens seeds through
-the public [`InitialStructureBackend`](eadld/initialization/api.py) contract. EADLD
-then applies a fixed-EPD mechanical gate, native real-ray tracing, candidate ranking,
-and hash-bound layout/spot artifacts.
+Design specifications → private generator → EADLD real-ray trace. No optimizer is
+used after generation. The generator and weights remain private.
 
-The inference path is deliberately **one shot**: no post-generation optimizer,
-paraxial focal/image solve, or catalog-glass snapping modifies a candidate. The
-backend architecture, training set, pair identities, prescriptions, and checkpoints
-are not distributed in this repository.
-
-![Private seed generator benchmark](docs/assets/initial_structure_benchmark.png)
-
-| Spectrum | Elements | Retrieved source / µm | Generated / µm | Private reference / µm | Valid rays |
-|---|---:|---:|---:|---:|---:|
-| 435–656 nm | 8 | 39.56 | **12.55** | 11.28 | 97.47% |
-| 435–656 nm | 9 | 15.60 | **9.96** | 8.52 | 100.00% |
-| 435–656 nm | 10 | 12.79 | **12.53** | 10.33 | 99.63% |
-| 435–850 nm | 8 | 23.46 | 67.41 | 27.45 | 95.53% |
-| 435–850 nm | 9 | 22.66 | 23.30 | 15.53 | 100.00% |
-| 435–850 nm | 10 | 22.10 | **19.41** | 16.86 | 99.77% |
-
-These are five-field EADLD real-ray seed metrics from a small internal teacher set.
-They are proof-of-concept results, not a held-out generalization, finished-lens, or
-external-tool-equivalence claim. The wide-band 8-element regression is retained to
-make the current limitation visible. Aggregate data are in
-[`docs/initial_structure_benchmark.json`](docs/initial_structure_benchmark.json).
-
-Representative 9-element visible result:
+74 mm · F/2.8 · ±6.17° · 435–656 nm · 9 elements
 
 ![Generated initial structure](docs/assets/initial_structure_layout.png)
 
 ![Generated initial-structure spot diagram](docs/assets/initial_structure_spots.png)
 
-Private backend usage:
+Mean/worst RMS: 9.97/12.09 µm. Valid rays: 100%.
 
 ```powershell
 python examples/generate_initial_structure.py --efl 74 --f-number 2.8 --half-field 6.17 --wavelengths 435 545.5 656 --elements 9 --candidate-count 3 --min-image-clearance 6.3 --max-package-length 55.5 --max-distortion 0.01 --target-cra 12 --backend private_seed.runtime:create_backend --backend-config D:\private\seed.toml --output-dir outputs\seed_demo

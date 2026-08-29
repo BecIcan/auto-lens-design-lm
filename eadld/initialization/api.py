@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import hashlib
 import importlib
 import json
@@ -16,6 +16,17 @@ import torch
 from eadld.modeling.optics import Lens
 from eadld.modeling.ray_initialization import RayInitialization
 from eadld.utils.visualization import generate_layout_plot, generate_spot_plot
+from eadld.initialization.codev_seq import lens_to_spherical_prescription, write_codev_seq
+
+
+STOP_SURFACE_CLEARANCE_MM = 0.2
+STOP_REPAIR_MARGIN_MM = 0.02
+LAYOUT_DIAMETER_SCALER = 17 / 16
+
+
+def _is_surface_mounted_stop(sequence: str) -> bool:
+    """光阑与前/后镜面共面，是合法的镜面安装方式。"""
+    return "-sR" in sequence or "Rs-" in sequence
 
 
 @dataclass(frozen=True)
@@ -172,23 +183,148 @@ def _mechanical_gate(lens: Lens, initializer: RayInitialization) -> dict:
     ):
         radius = r[:2].norm(dim=0).where(status == 0, 0.0)
         diameters.append(2 * float(radius.max()))
+    geometry = list(lens.return_geometry())
+    refractive_event_indices = [
+        index
+        for index, event in enumerate(lens.sequence.events)
+        if event["type"] == "r"
+    ]
     optical = [
-        (item, diameters[index])
-        for index, item in enumerate(lens.return_geometry())
-        if item[0] == "r"
+        (geometry_index, event_index, item, diameters[geometry_index])
+        for event_index, (geometry_index, item) in zip(
+            refractive_event_indices,
+            (
+                (geometry_index, item)
+                for geometry_index, item in enumerate(geometry)
+                if item[0] == "r"
+            ),
+            strict=True,
+        )
     ]
     clearances = []
     for index in range(1, len(optical)):
-        (_, left_z, left_sag, _), left_diameter = optical[index - 1]
-        (_, right_z, right_sag, closes_glass), right_diameter = optical[index]
+        _, left_event, (_, left_z, left_sag, _), left_diameter = optical[index - 1]
+        _, right_event, (_, right_z, right_sag, closes_glass), right_diameter = optical[index]
         semi = 0.525 * min(left_diameter, right_diameter)
         y = torch.linspace(0.0, max(semi, 1e-6), 96, dtype=lens.c.dtype)
         left = left_z + (left_sag(y) if left_sag else 0.0)
         right = right_z + (right_sag(y) if right_sag else 0.0)
         minimum = float((right - left).min())
         required = 0.3 if closes_glass else 0.05
-        clearances.append({"minimum_mm": minimum, "required_mm": required, "passed": minimum >= required})
-    return {"passed": bool(clearances) and all(row["passed"] for row in clearances), "clearances": clearances}
+        spacing_indices = tuple(
+            dict.fromkeys(
+                event["s"]
+                for event in lens.sequence.events[left_event + 1 : right_event]
+                if event["type"] == "p" and isinstance(event.get("s"), int)
+            )
+        )
+        clearances.append(
+            {
+                "minimum_mm": minimum,
+                "required_mm": required,
+                "passed": minimum >= required,
+                "spacing_indices": spacing_indices,
+            }
+        )
+
+    stop_geometry_index = next(
+        index for index, item in enumerate(geometry) if item[0] == "s"
+    )
+    left = next(
+        (item for item in reversed(optical) if item[0] < stop_geometry_index),
+        None,
+    )
+    right = next(
+        (item for item in optical if item[0] > stop_geometry_index),
+        None,
+    )
+
+    def surface_bounds(item, diameter: float) -> tuple[float, float]:
+        _, z, sag_fn, _ = item
+        y = torch.linspace(
+            0.0,
+            max(0.5 * diameter * LAYOUT_DIAMETER_SCALER, 1e-6),
+            128,
+            dtype=lens.c.dtype,
+        )
+        surface_z = z + (sag_fn(y) if sag_fn else 0.0)
+        return float(surface_z.min()), float(surface_z.max())
+
+    stop_z = float(geometry[stop_geometry_index][1])
+    left_edge = float("-inf")
+    right_edge = float("inf")
+    if left is not None:
+        _, _, left_item, left_diameter = left
+        _, left_edge = surface_bounds(left_item, left_diameter)
+    if right is not None:
+        _, _, right_item, right_diameter = right
+        right_edge, _ = surface_bounds(right_item, right_diameter)
+    stop_clearance = {
+        "front_mm": stop_z - left_edge,
+        "rear_mm": right_edge - stop_z,
+        "required_mm": STOP_SURFACE_CLEARANCE_MM,
+        "surface_mounted": _is_surface_mounted_stop(lens.sequence.sequence),
+    }
+    stop_clearance["passed"] = (
+        stop_clearance["surface_mounted"]
+        or (
+            stop_clearance["front_mm"] >= STOP_SURFACE_CLEARANCE_MM
+            and stop_clearance["rear_mm"] >= STOP_SURFACE_CLEARANCE_MM
+        )
+    )
+    return {
+        "passed": bool(clearances)
+        and all(row["passed"] for row in clearances)
+        and stop_clearance["passed"],
+        "clearances": clearances,
+        "stop_clearance": stop_clearance,
+    }
+
+
+def _relocate_stop_in_air_gap(
+    seed: LensSeed,
+    initializer: RayInitialization,
+) -> LensSeed | None:
+    """在不改变相邻镜片位置的前提下，把光阑移到空气隙内。"""
+    sequence = seed.lens_sequence
+    if _is_surface_mounted_stop(sequence):
+        return seed
+    stop_offset = sequence.index("s")
+    if (
+        stop_offset == 0
+        or stop_offset == len(sequence) - 1
+        or sequence[stop_offset - 1 : stop_offset + 2] != "-s-"
+    ):
+        return None
+
+    spacing_before_stop = sum(char in "R-" for char in sequence[:stop_offset]) - 1
+    spacing_after_stop = spacing_before_stop + 1
+    repaired = seed
+    for _ in range(6):
+        lens = repaired.to_lens()
+        stop = _mechanical_gate(lens, initializer)["stop_clearance"]
+        if stop["passed"]:
+            return repaired
+
+        geometry = list(lens.return_geometry())
+        stop_z = float(next(item[1] for item in geometry if item[0] == "s"))
+        repair_clearance = STOP_SURFACE_CLEARANCE_MM + STOP_REPAIR_MARGIN_MM
+        lower_z = stop_z - stop["front_mm"] + repair_clearance
+        upper_z = stop_z + stop["rear_mm"] - repair_clearance
+        if lower_z > upper_z:
+            return None
+        target_z = min(max(stop_z, lower_z), upper_z)
+
+        spacings = list(repaired.spacings_mm)
+        total_gap = spacings[spacing_before_stop] + spacings[spacing_after_stop]
+        shifted_before = spacings[spacing_before_stop] + target_z - stop_z
+        shifted_after = total_gap - shifted_before
+        if min(shifted_before, shifted_after) < 0.05:
+            return None
+        spacings[spacing_before_stop] = shifted_before
+        spacings[spacing_after_stop] = shifted_after
+        repaired = replace(repaired, spacings_mm=tuple(spacings))
+    return None
 
 
 def _sha256(path: Path) -> str:
@@ -219,12 +355,21 @@ def run_generation_audit(
     seeds = backend.generate(spec)
     if not 1 <= len(seeds) <= spec.candidate_count:
         raise ValueError("backend 返回的候选数必须在 1..candidate_count")
+    lenses = []
+    for seed in seeds:
+        lens = seed.to_lens()
+        actual_elements = lens.sequence.n_refractive
+        if actual_elements != spec.elements:
+            raise ValueError(
+                f"候选 {seed.candidate_id} 的实际片数为 {actual_elements}，"
+                f"与请求的 {spec.elements} 片不一致"
+            )
+        lenses.append(lens)
     initializer = _initializer(spec)
     records = []
     runtime = []
-    for seed in seeds:
+    for seed, lens in zip(seeds, lenses):
         try:
-            lens = seed.to_lens()
             metrics, xy, valid = _trace(lens, initializer)
             mechanics = _mechanical_gate(lens, initializer)
             first_order = {
@@ -257,6 +402,7 @@ def run_generation_audit(
             records.append(
                 {
                     "candidate_id": seed.candidate_id,
+                    "elements": lens.sequence.n_refractive,
                     "passed": passed,
                     "metrics": metrics,
                     "mechanics": mechanics,
@@ -269,19 +415,64 @@ def run_generation_audit(
                 {"candidate_id": seed.candidate_id, "passed": False, "error": f"{type(error).__name__}: {error}"}
             )
             runtime.append(None)
-    viable = [(row["metrics"]["mean_rms_radius_um"], index) for index, row in enumerate(records) if row["passed"]]
+    viable = sorted(
+        (row["metrics"]["mean_rms_radius_um"], index)
+        for index, row in enumerate(records)
+        if row["passed"]
+    )
     if not viable:
         raise RuntimeError("没有候选通过机械与真实光线门槛")
-    _, selected_index = min(viable)
-    lens, xy, valid = runtime[selected_index]
-    layout = output / "layout.png"
-    spots = output / "spots.png"
-    generate_layout_plot(lens, initializer, list(spec.wavelengths_nm), n_rays=5, n_fields=3).savefig(
-        layout, dpi=180, bbox_inches="tight"
-    )
-    generate_spot_plot(xy, valid, spec.wavelengths_nm, spec.max_field_angle_deg).savefig(
-        spots, dpi=180, bbox_inches="tight"
-    )
+    selected_index = viable[0][1]
+    selected_artifacts = None
+    for rank, (_, candidate_index) in enumerate(viable, start=1):
+        lens, xy, valid = runtime[candidate_index]
+        candidate_output = output if rank == 1 else output / f"candidate-{rank:02d}"
+        candidate_output.mkdir(exist_ok=rank == 1)
+        layout = candidate_output / "layout.png"
+        spots = candidate_output / "spots.png"
+        generate_layout_plot(
+            lens,
+            initializer,
+            list(spec.wavelengths_nm),
+            n_rays=5,
+            n_fields=3,
+        ).savefig(layout, dpi=180, bbox_inches="tight")
+        generate_spot_plot(
+            xy,
+            valid,
+            spec.wavelengths_nm,
+            spec.max_field_angle_deg,
+        ).savefig(spots, dpi=180, bbox_inches="tight")
+        candidate_artifacts = {
+            "layout": {"path": str(layout.resolve()), "sha256": _sha256(layout)},
+            "spots": {"path": str(spots.resolve()), "sha256": _sha256(spots)},
+        }
+        if all(char in "R-s" for char in lens.sequence.sequence):
+            fields = (
+                (0.0,)
+                if spec.max_field_angle_deg == 0
+                else (
+                    0.0,
+                    spec.max_field_angle_deg / math.sqrt(2.0),
+                    spec.max_field_angle_deg,
+                )
+            )
+            prescription = lens_to_spherical_prescription(
+                lens,
+                title=f"EADLD_{records[candidate_index]['candidate_id']}",
+                epd_mm=spec.entrance_pupil_diameter_mm,
+                wavelengths_nm=spec.wavelengths_nm,
+                field_angles_deg=fields,
+            )
+            seq = write_codev_seq(prescription, candidate_output / "initial_structure.seq")
+            candidate_artifacts["seq"] = {
+                "path": str(seq.resolve()),
+                "sha256": _sha256(seq),
+            }
+        records[candidate_index]["rank"] = rank
+        records[candidate_index]["artifacts"] = candidate_artifacts
+        if rank == 1:
+            selected_artifacts = candidate_artifacts
     manifest = {
         "status": "private_generation_public_physics_audit",
         "spec": {**asdict(spec), "wavelengths_nm": list(spec.wavelengths_nm)},
@@ -295,10 +486,7 @@ def run_generation_audit(
         },
         "selected_candidate_id": records[selected_index]["candidate_id"],
         "candidates": records,
-        "artifacts": {
-            "layout": {"path": str(layout.resolve()), "sha256": _sha256(layout)},
-            "spots": {"path": str(spots.resolve()), "sha256": _sha256(spots)},
-        },
+        "artifacts": selected_artifacts,
         "evidence_boundary": "These are EADLD native real-ray seed metrics, not a finished-lens or external-tool equivalence claim.",
     }
     manifest = _json_safe(manifest)

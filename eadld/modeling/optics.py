@@ -708,7 +708,8 @@ class Lens:
                 a = self.a[event["a"]] if "a" in event else None
                 z = self.z[event["z"]] if "z" in event else None
 
-                def sag_fn(y):
+                # 绑定当前表面的参数；几何列表化后也不能引用到后续表面。
+                def sag_fn(y, c=c, a=a, z=z):
                     rho = y.view(-1, 1) ** 2
                     if z is not None:
                         return rt.evaluate_zonal_profile(rho, c.to(y), z.to(y))[0][:, 0]
@@ -724,8 +725,12 @@ class Lens:
                 event["type"] in ("r", "s", "d", "m")
                 or i == len(self.sequence.events) - 1
             ):
-                yield event["type"], cum_z_distance, sag_fn, is_refractive
-                is_refractive = False
+                # 光阑可能与玻璃后表面位于同一轴向位置。它不是介质界面，
+                # 不能提前消耗随后真实表面的玻璃闭合标记。
+                closes_glass = is_refractive and event["type"] != "s"
+                yield event["type"], cum_z_distance, sag_fn, closes_glass
+                if event["type"] != "s":
+                    is_refractive = False
 
     def estimate_diameters(
         self, r: torch.Tensor, d: torch.Tensor, wavelengths: list[float] | torch.Tensor

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="dark">
+    <meta name="color-scheme" content="light">
     <title>EADLD Seed Lab</title>
     <link rel="stylesheet" href="/static/app.css">
   </head>
@@ -21,14 +21,13 @@
         <form id="seed-form" class="panel controls">
           <div class="section-head">
             <h2>设计指标</h2>
-            <p>生成后直接追迹，不调用优化器</p>
           </div>
 
           <div class="grid two">
             <label>焦距 / mm<input name="efl_mm" type="number" min="5" max="1000" step="0.1" value="74" required></label>
             <label>F/#<input name="f_number" type="number" min="1" max="32" step="0.1" value="2.8" required></label>
             <label>半视场 / °<input name="half_field_deg" type="number" min="0" max="59" step="0.01" value="6.17" required></label>
-            <label>镜片数<select name="elements"><option>6</option><option>7</option><option>8</option><option selected>9</option><option>10</option></select></label>
+            <label>镜片数<select name="elements"><option>4</option><option>5</option><option>6</option><option>7</option><option selected>8</option><option>9</option><option>10</option></select></label>
           </div>
 
           <label>波长 / nm<input name="wavelengths_nm" type="text" value="435, 545.5, 656" spellcheck="false" required></label>
@@ -44,18 +43,26 @@
             </div>
           </details>
 
-          <label class="access">访问码<input name="access_token" type="password" autocomplete="current-password" placeholder="仅用于本次页面会话" required></label>
           <button id="generate" type="submit"><span>生成初始结构</span><i></i></button>
+          <button id="export-seq" class="secondary" type="button" disabled>导出 SEQ</button>
+          <p id="quota" class="quota">正在读取今日额度…</p>
+          <p class="contact">如需更多体验次数，联系 791395970@qq.com</p>
           <p id="message" class="message" aria-live="polite">输入指标后开始生成</p>
         </form>
 
         <section class="results">
           <div id="metrics" class="metrics" hidden>
+            <div><span>镜片数</span><strong data-key="elements">—</strong><small>片</small></div>
             <div><span>EFL</span><strong data-key="efl_mm">—</strong><small>mm</small></div>
             <div><span>BFL</span><strong data-key="bfl_mm">—</strong><small>mm</small></div>
             <div><span>TTL</span><strong data-key="ttl_mm">—</strong><small>mm</small></div>
             <div><span>平均 RMS</span><strong data-key="mean_rms_um">—</strong><small>μm</small></div>
             <div><span>有效光线</span><strong data-key="valid_ray_percent">—</strong><small>%</small></div>
+          </div>
+
+          <div id="candidate-bar" class="candidate-bar" hidden>
+            <span id="candidate-count"></span>
+            <div id="candidate-buttons"></div>
           </div>
 
           <article class="panel figure wide">
@@ -64,7 +71,6 @@
           </article>
 
           <article class="panel figure">
-            <div class="figure-head"><h2>点列图</h2><span>Spot diagram</span></div>
             <div class="canvas spots"><p>等待追迹</p><img id="spots" alt="生成结构的真实光线点列图" hidden></div>
           </article>
         </section>

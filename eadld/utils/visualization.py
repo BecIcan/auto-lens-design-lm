@@ -1935,8 +1935,9 @@ def generate_spot_plot(
     fields = np.linspace(0, hfov, n_fields)
     colors = wavelengths2color(np.asarray(wavelengths))
     if fig is None:
-        fig = mpl.figure.Figure(figsize=(4.2 * n_fields, 4.0))
+        fig = mpl.figure.Figure(figsize=(2.8 * n_fields, 2.8))
     axes = fig.subplots(1, n_fields, squeeze=False)[0]
+    max_extent = 0.0
     for field, ax in enumerate(axes):
         all_points = []
         for wave, (wavelength, color) in enumerate(zip(wavelengths, colors)):
@@ -1953,23 +1954,36 @@ def generate_spot_plot(
                 s=4,
                 color=color,
                 alpha=0.72,
-                label=f"{wavelength:g} nm",
             )
+            max_extent = max(max_extent, float(centered.abs().max()))
         if all_points:
             points = torch.cat(all_points, dim=1)
             center = points.mean(dim=1, keepdim=True)
             rms = float((points - center).square().sum(0).mean().sqrt()) * 1e3
-            ax.set_title(f"{fields[field]:.2f}°  RMS {rms:.2f} μm")
+            max_extent = max(
+                max_extent,
+                float(((points - center) * 1e3).abs().max()),
+            )
+            label = f"{fields[field]:.2f}° · RMS {rms:.2f} μm"
         else:
-            ax.set_title(f"{fields[field]:.2f}°  no valid rays")
-        ax.axhline(0, color="0.75", lw=0.5)
-        ax.axvline(0, color="0.75", lw=0.5)
-        ax.set_aspect("equal", adjustable="datalim")
-        ax.set_xlabel("x [μm]")
-    axes[0].set_ylabel("y [μm]")
-    axes[0].legend(frameon=False, fontsize=7)
-    fig.suptitle("EADLD native real-ray spot diagrams")
-    fig.tight_layout()
+            label = f"{fields[field]:.2f}° · RMS —"
+        ax.text(
+            0.5,
+            0.02,
+            label,
+            transform=ax.transAxes,
+            ha="center",
+            va="bottom",
+            color="black",
+            fontsize=8,
+        )
+        ax.set_axis_off()
+    limit = max(max_extent * 1.08, 1e-3)
+    for ax in axes:
+        ax.set_xlim(-limit, limit)
+        ax.set_ylim(-limit, limit)
+        ax.set_aspect("equal", adjustable="box")
+    fig.subplots_adjust(left=0.01, right=0.99, bottom=0.01, top=0.99, wspace=0.04)
     return fig
 
 
@@ -1977,7 +1991,7 @@ def plot_layout(
     ax: mpl.axes.Axes,
     lens: optics.Lens,
     diameters: torch.Tensor,
-    stop_color: str = "C1",
+    stop_color: str = "k",
     scale_bar: bool = False,
     glass_labels: list[str] | None = None,
     diameter_scaler: float = 1.0,
@@ -2008,11 +2022,13 @@ def plot_layout(
     last_y = last_edge_z = last_vertex_z = 0
     refractive_element_idx = 0
 
+    geometry = list(lens.return_geometry())
+    surface_mounted_stop = "-sR" in lens.sequence.sequence or "Rs-" in lens.sequence.sequence
     for k, ((surface_type, z, sag_fn, is_refractive), diameter) in enumerate(
-        zip(lens.return_geometry(), diameters)
+        zip(geometry, diameters)
     ):
         diameter = diameter.item()
-        diameter = diameter * (1 if surface_type == "s" else diameter_scaler)
+        diameter = diameter * diameter_scaler
         z = z.item()
         y = diameter / 2
 
@@ -2020,6 +2036,10 @@ def plot_layout(
         if surface_type == "s":
             color = stop_color
             ratio = 7 / 6
+            if surface_mounted_stop:
+                neighbor = k + 1 if "-sR" in lens.sequence.sequence else k - 1
+                if 0 <= neighbor < len(diameters):
+                    y = max(y, float(diameters[neighbor]) * diameter_scaler / 2)
             left_z = right_z = current_edge_z = z
             ax.vlines([z, z], [-y, y], [-y * ratio, y * ratio], colors=color, zorder=-1)
             y = y * ratio
@@ -2086,9 +2106,11 @@ def plot_layout(
                 )
             refractive_element_idx += 1
 
-        last_y = y
-        last_edge_z = current_edge_z
-        last_vertex_z = z
+        # 光阑不是镜片表面，不能覆盖下一条玻璃闭合边的起点。
+        if surface_type != "s":
+            last_y = y
+            last_edge_z = current_edge_z
+            last_vertex_z = z
         min_z = min(min_z, left_z)
         max_z = max(max_z, right_z)
         min_y = min(min_y, -y)

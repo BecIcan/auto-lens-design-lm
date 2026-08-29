@@ -16,7 +16,7 @@ import torch
 from eadld.modeling.optics import Lens
 from eadld.modeling.ray_initialization import RayInitialization
 from eadld.utils.visualization import generate_layout_plot, generate_spot_plot
-from eadld.initialization.codev_seq import lens_to_spherical_prescription, write_codev_seq
+from eadld.initialization.seq_export import lens_to_spherical_prescription, write_codev_seq
 
 
 STOP_SURFACE_CLEARANCE_MM = 0.2

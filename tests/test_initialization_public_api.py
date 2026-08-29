@@ -8,10 +8,8 @@ from eadld.initialization.api import (
     _mechanical_gate,
     _relocate_stop_in_air_gap,
 )
-from eadld.initialization.codev_seq import (
+from eadld.initialization.seq_export import (
     lens_to_spherical_prescription,
-    parse_codev_seq,
-    prescription_to_lens,
     write_codev_seq,
 )
 from eadld.utils.visualization import generate_spot_plot, plot_layout
@@ -237,7 +235,7 @@ def test_spot_plot_contains_only_tightly_framed_point_clouds():
     assert all("° · RMS " in ax.texts[0].get_text() for ax in figure.axes)
 
 
-def test_spherical_lens_exports_as_reloadable_codev_seq(tmp_path):
+def test_spherical_lens_exports_codev_seq(tmp_path):
     lens = LensSeed(
         candidate_id="seq-export",
         lens_sequence="R-Rs-RR-",
@@ -254,12 +252,11 @@ def test_spherical_lens_exports_as_reloadable_codev_seq(tmp_path):
         field_angles_deg=(0.0, 4.0, 6.0),
     )
     path = write_codev_seq(prescription, tmp_path / "candidate.seq")
-    parsed = parse_codev_seq(path)
-    reloaded = prescription_to_lens(parsed)
+    text = path.read_text(encoding="utf-8")
+    surface_rows = [line for line in text.splitlines() if line.startswith("S     ")]
 
-    assert parsed.wavelengths_nm == (656.0, 545.5, 435.0)
-    assert reloaded.sequence.sequence == lens.sequence.sequence
-    assert torch.allclose(reloaded.s, lens.s)
-    assert torch.allclose(reloaded.c, lens.c)
-    assert torch.allclose(reloaded.nd, lens.nd, atol=1e-6)
-    assert torch.allclose(reloaded.vd, lens.vd, atol=1e-4)
+    assert "WL    656 545.5 435" in text
+    assert "TITLE 'SEQ_export_test'" in text
+    assert len(surface_rows) == lens.s.shape[0]
+    assert text.count("  STO\n") == 1
+    assert text.endswith("GO\n")

@@ -36,10 +36,6 @@ Network details and weights remain private.
 
 Mean/worst RMS: 9.97/12.09 µm. Valid rays: 100%.
 
-```powershell
-python examples/generate_initial_structure.py --efl 74 --f-number 2.8 --half-field 6.17 --wavelengths 435 545.5 656 --elements 8 --candidate-count 3 --min-image-clearance 6.3 --max-package-length 55.5 --max-distortion 0.01 --target-cra 12 --backend private_seed.runtime:create_backend --backend-config D:\private\seed.toml --output-dir outputs\seed_demo
-```
-
 ## Optical Model
 
 Each annular zone uses a local sag profile:

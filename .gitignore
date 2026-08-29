@@ -49,12 +49,6 @@ events.out.tfevents.*
 
 # Private initial-structure generator implementation
 /private/
-/eadld/initialization/model.py
-/eadld/initialization/pipeline.py
-/eadld/initialization/codev_seq.py
-/examples/distilled_sxp_demo.py
-/tests/test_initialization_pipeline.py
-/tests/test_codev_seq_bridge.py
 
 # Office and publication build intermediates
 ~$*.docx

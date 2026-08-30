@@ -25,7 +25,7 @@ python examples/audit_paper_demos.py
 初始结构由带结构先验的轻量条件网络生成，随后直接进入 EADLD 真实光线追迹；生成后不再优化。
 网络细节和权重不公开。
 
-[体验网站](https://spelling-popularity-honor-group.trycloudflare.com)
+[体验网站](https://lady-automotive-donors-increase.trycloudflare.com)
 
 74 mm · F/2.8 · ±6.17° · 435–656 nm · 8 片
 

@@ -26,7 +26,9 @@ Starting structures are produced by a compact conditional network with structura
 priors, then traced directly in EADLD. No optimization is applied after generation.
 Network details and weights remain private.
 
-[Experience website](https://lady-automotive-donors-increase.trycloudflare.com)
+[Experience website](https://automotive-collective-sites-athletics.trycloudflare.com)
+
+The demo runs on a local host through a temporary tunnel; availability depends on the host, and the URL may change after a tunnel restart.
 
 74 mm · F/2.8 · ±6.17° · 435–656 nm · 8 elements
 
